@@ -3,8 +3,8 @@ import { env } from '../../config/env.js';
 
 export class ExecutionQueue {
   constructor(
-    concurrency = env.EXECUTION_CONCURRENCY || (process.env.NODE_ENV === 'production' ? Math.min(8, Math.max(4, os.cpus().length || 4)) : 2),
-    maxQueueSize = env.EXECUTION_MAX_QUEUE || 2000
+    concurrency = env.EXECUTION_CONCURRENCY || 2, // Throttled to 2 parallel tasks to protect Railway Hobby RAM and prevent OOM
+    maxQueueSize = env.EXECUTION_MAX_QUEUE || 2000 // Accommodates large 700+ student batches in queue without drops
   ) {
     this.concurrency = concurrency;
     this.maxQueueSize = maxQueueSize;
