@@ -84,7 +84,7 @@ export function exportAttendanceExcel({
 
     return {
       'S.No': index + 1,
-      'Superset ID': r.rollNumber && r.rollNumber !== 'null' ? r.rollNumber : '—',
+      'Superset ID': (r.rollNumber && r.rollNumber !== 'null' ? r.rollNumber : '—').replace(/^EMP/i, ''),
       'Candidate Name': r.name || r.participantName || r.userName || 'Candidate',
       'Email Address': r.email || '—',
       'Department': r.department || '—',
@@ -93,9 +93,6 @@ export function exportAttendanceExcel({
       'Batch Code': batchCode,
       'Attendance Status':
         r.status === 'completed' || r.status === 'present' ? 'Present' : 'Absent',
-      'Check-in Time': formatT(r.startedAt || r.testStartTimestamp),
-      'Turn-in Time': formatT(r.submittedAt || r.submitTimestamp),
-      'Duration (Minutes)': r.durationMinutes || 0,
     };
   });
 
@@ -109,9 +106,6 @@ export function exportAttendanceExcel({
     { wch: 20 },
     { wch: 28 },
     { wch: 14 },
-    { wch: 18 },
-    { wch: 20 },
-    { wch: 20 },
     { wch: 18 },
   ];
 

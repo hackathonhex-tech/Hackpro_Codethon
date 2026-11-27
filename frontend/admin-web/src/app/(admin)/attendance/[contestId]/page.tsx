@@ -149,7 +149,7 @@ export default function AttendancePage() {
       header: 'Superset ID',
       render: (r: AttendanceRecord) => (
         <span className="font-mono font-bold text-xs text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
-          {r.rollNumber && r.rollNumber !== 'null' ? r.rollNumber : '—'}
+          {(r.rollNumber && r.rollNumber !== 'null' ? r.rollNumber : '—').replace(/^EMP/i, '')}
         </span>
       ),
     },

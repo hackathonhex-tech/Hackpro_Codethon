@@ -192,21 +192,18 @@ export class AttendanceService {
         'S.No': index + 1,
         'Candidate Name': r.name || r.participantName || 'Candidate',
         'Email Address': r.email || '—',
-        'Superset ID': r.rollNumber || '—',
+        'Superset ID': (r.rollNumber || '—').replace(/^EMP/i, ''),
         'Department': r.department || '—',
         'Contest Title': contest?.title || r.contestTitle || 'Assessment Contest',
         'Batch Code': contest?.batchCode || r.batchCode || '—',
         'Team Allocation': r.teamName || 'Individual',
         'Attendance Status': resolvedStatus,
         'Login Status': r.loginStatus || (r.status !== 'absent' ? 'Logged In' : 'Not Logged In'),
-        'Test Start Time': formatTime(r.startedAt || r.testStartTimestamp),
-        'Submission Time': formatTime(r.submittedAt || r.submitTimestamp),
-        'Duration (Minutes)': r.durationMinutes || 0,
       };
     });
 
     if (formattedRecords.length === 0) {
-      return 'S.No,Candidate Name,Email Address,Superset ID,Department,Contest Title,Batch Code,Team Allocation,Attendance Status,Login Status,Test Start Time,Submission Time,Duration (Minutes)\n';
+      return 'S.No,Candidate Name,Email Address,Superset ID,Department,Contest Title,Batch Code,Team Allocation,Attendance Status,Login Status\n';
     }
 
     return toCsv(formattedRecords);

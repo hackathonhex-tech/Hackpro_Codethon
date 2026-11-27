@@ -96,10 +96,10 @@ export function exportAttendancePdf({
   doc.setTextColor(239, 68, 68); // Red
   doc.text(`${absent}`, 163, 42);
 
-  // 3. Table Rows (Department removed; Candidate Email, Check-in Time, and Turn-in Time emphasized)
+  // 3. Table Rows (Clean Superset ID without EMP prefix; Check-in & Turn-in removed as requested)
   const tableData = records.map((r, index) => {
     const candidateName = r.name || r.participantName || r.userName || 'Candidate';
-    const rollNo = r.rollNumber && r.rollNumber !== 'null' ? r.rollNumber : '—';
+    const rollNo = (r.rollNumber && r.rollNumber !== 'null' ? r.rollNumber : '—').replace(/^EMP/i, '');
     const email =
       (r.email && r.email !== '—' && r.email !== 'null' && r.email) ||
       ((r as any).userEmail && (r as any).userEmail !== '—' && (r as any).userEmail) ||
@@ -114,19 +114,6 @@ export function exportAttendancePdf({
         ? 'Present'
         : 'Absent';
 
-    const checkinRaw = r.startedAt || (r as any).testStartTimestamp || (r as any).loginTimestamp;
-    const turninRaw = r.submittedAt || (r as any).submitTimestamp;
-
-    const formatT = (t?: string | null) => {
-      if (!t) return '—';
-      try {
-        const d = new Date(t);
-        return isNaN(d.getTime()) ? '—' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-      } catch {
-        return '—';
-      }
-    };
-
     return [
       String(index + 1),
       rollNo,
@@ -134,9 +121,6 @@ export function exportAttendancePdf({
       email,
       team,
       statusLabel,
-      formatT(checkinRaw),
-      formatT(turninRaw),
-      `${r.durationMinutes || 0}m`,
     ];
   });
 
@@ -151,9 +135,6 @@ export function exportAttendancePdf({
         'Candidate Email',
         'Team Allocation',
         'Status',
-        'Check-in Time',
-        'Turn-in Time',
-        'Duration',
       ],
     ],
     body: tableData,
@@ -161,28 +142,25 @@ export function exportAttendancePdf({
     headStyles: {
       fillColor: [30, 41, 59],
       textColor: [255, 255, 255],
-      fontSize: 8,
+      fontSize: 8.5,
       fontStyle: 'bold',
       halign: 'left',
     },
     bodyStyles: {
-      fontSize: 7.5,
+      fontSize: 8,
       textColor: [30, 41, 59],
-      cellPadding: 2.5,
+      cellPadding: 3,
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252],
     },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 30, fontStyle: 'bold' },
-      2: { cellWidth: 46 },
-      3: { cellWidth: 60 },
-      4: { cellWidth: 30 },
-      5: { cellWidth: 25, fontStyle: 'bold' },
-      6: { cellWidth: 25 },
-      7: { cellWidth: 25 },
-      8: { cellWidth: 18, halign: 'center' },
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 40, fontStyle: 'bold' },
+      2: { cellWidth: 65 },
+      3: { cellWidth: 85 },
+      4: { cellWidth: 38 },
+      5: { cellWidth: 29, fontStyle: 'bold' },
     },
     didDrawCell: (data) => {
       // Highlight Status column
