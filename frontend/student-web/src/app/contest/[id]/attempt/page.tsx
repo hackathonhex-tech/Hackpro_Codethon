@@ -1054,15 +1054,14 @@ export default function AttemptPage() {
 
       {/* ===================== TOP COMMAND HEADER ===================== */}
       <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between shrink-0 z-30 shadow-xs gap-2">
-        {/* Left: Brand & Contest Title */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <img src="/logo.png" alt="HACKPRO" className="h-7 sm:h-8 w-auto object-contain rounded shrink-0" />
+        {/* Left: Contest Title */}
+        <div className="flex items-center gap-2 min-w-0">
           <div className="min-w-0">
-            <h1 className="font-extrabold text-slate-900 text-xs sm:text-base tracking-tight truncate max-w-[110px] xs:max-w-[180px] sm:max-w-md">
+            <h1 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight truncate max-w-[170px] xs:max-w-[240px] sm:max-w-md">
               {attempt?.contest?.title || 'Assessment'}
             </h1>
             <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate hidden sm:block">
-              {currentUser?.name} &bull; {currentUser?.rollNumber}
+              {currentUser?.name}
             </p>
           </div>
         </div>
@@ -1956,9 +1955,9 @@ export default function AttemptPage() {
                     <div>
                       {/* Loading State */}
                       {(runningCode || submittingCode) && (
-                        <div className="py-14 flex flex-col items-center justify-center gap-3 text-slate-400">
+                        <div className="py-5 sm:py-8 px-3 flex flex-col items-center justify-center text-center gap-2 text-slate-400">
                           <Spinner size="md" />
-                          <span className="text-xs font-semibold font-sans tracking-wide">
+                          <span className="text-xs font-semibold font-sans tracking-wide text-slate-300 max-w-[280px] sm:max-w-md leading-relaxed">
                             {runningCode ? 'Compiling and executing code with HACKPRO Compiler Engine...' : 'Grading all test cases against test harness...'}
                           </span>
                         </div>

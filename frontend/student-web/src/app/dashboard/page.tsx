@@ -259,12 +259,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="HACKPRO" className="h-9 sm:h-10 w-auto object-contain rounded" />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-slate-900 tracking-tight text-base sm:text-lg">HACKPRO</span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium hidden sm:block">Candidate Assessment System</p>
-            </div>
+            <p className="text-[11px] text-slate-400 font-medium hidden sm:block">Candidate Assessment System</p>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-5">
@@ -280,7 +275,7 @@ export default function DashboardPage() {
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-slate-900 tracking-tight leading-snug">{currentUser?.name}</p>
                 <p className="text-[11px] text-slate-500 font-mono tracking-wide leading-none">
-                  {currentUser?.rollNumber ?? currentUser?.email}
+                  {currentUser?.email}
                 </p>
               </div>
               <button
@@ -602,18 +597,6 @@ export default function DashboardPage() {
 
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight break-words max-w-full px-2">{currentUser?.name}</h3>
                 <p className="text-xs text-slate-500 font-medium mt-0.5 break-all max-w-full px-2" title={currentUser?.email}>{currentUser?.email}</p>
-
-                <div className="mt-3.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 font-mono">
-                  <span className="text-slate-400 font-sans text-[11px]">Employee ID:</span>
-                  <span className="font-bold tracking-wider">{currentUser?.rollNumber ?? '—'}</span>
-                  <button
-                    onClick={copyRollNumber}
-                    title="Copy Employee ID"
-                    className="p-1 rounded text-slate-400 hover:text-[#3760F8] hover:bg-slate-200/60 transition-colors ml-1 cursor-pointer"
-                  >
-                    {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
               </div>
 
               <div className="mt-6 pt-5 border-t border-slate-100 space-y-3 text-xs">

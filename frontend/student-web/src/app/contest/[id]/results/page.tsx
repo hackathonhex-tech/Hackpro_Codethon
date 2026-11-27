@@ -287,8 +287,7 @@ export default function ResultsPage() {
         {/* Candidate Attempt & Time Details Card */}
         <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-xs">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#3760F8]" />
+            <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Attempt &amp; Submission Summary</h2>
             </div>
             <span className="text-[11px] font-mono text-slate-400">ID: {String(rawAttempt.id || rawAttempt._id || id).slice(-8)}</span>
@@ -335,19 +334,13 @@ export default function ResultsPage() {
         {showTotalPointsEarned && leaderboard.length > 0 && (
           <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-7 shadow-xs">
             <div className="flex items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100/80 text-[#3760F8] flex items-center justify-center shrink-0">
-                  <Trophy className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 tracking-tight">Contest Leaderboard</h2>
-                  <p className="text-[11px] text-slate-400">
-                    Ranked by highest score &bull; Tiebreaker: shortest completion time
-                  </p>
-                </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 tracking-tight">Contest Leaderboard</h2>
+                <p className="text-[11px] text-slate-400">
+                  Ranked by highest score &bull; Tiebreaker: shortest completion time
+                </p>
               </div>
               <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200/80 text-slate-600 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-[#3760F8]" />
                 Official Standings
               </span>
             </div>
