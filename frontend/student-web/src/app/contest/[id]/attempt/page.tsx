@@ -820,48 +820,57 @@ export default function AttemptPage() {
   const submissionsRemaining = Math.max(0, maxSubmissions - currentSubmissionsUsed);
   const isSubmissionLimitReached = currentSubmissionsUsed >= maxSubmissions;
 
-  // Code Runner (Option A Hybrid: Browser WebAssembly for Python/JS, In-house Backend for Java/C#)
+  // Code Runner: Executes natively on Railway Backend container in ~150ms with resilient browser fallback
   const handleRunCode = async () => {
     if (!qId || !currentAnswer?.code) return;
     if (cooldownRemaining > 0) return;
     setRunningCode(true);
     setRunResult(null);
     setSubmitCodeResult(null);
+    setIsConsoleCollapsed(false);
     setActiveConsoleTab('result');
     setSelectedCaseIdx(0);
 
     const lang = (currentAnswer.language || 'python').toLowerCase();
 
-    // OPTION A (HYBRID): Execute Python and JavaScript 100% inside candidate's browser (0 server load)
-    if (isClientRunnable(lang)) {
-      try {
-        if (showCustomInput) {
-          const clientRes = await runCodeInBrowser({
-            code: currentAnswer.code,
-            language: lang,
-            input: customInput,
-          });
+    // 1. Primary: Server-side execution (Native Docker container on Railway, fast and works on all mobile devices)
+    try {
+      const res = await contestApi.runCode(contestId, {
+        questionId: qId,
+        code: currentAnswer.code,
+        language: lang,
+        customInput: showCustomInput ? customInput : undefined,
+      });
+      setRunResult(res as RunResult);
+      setActiveConsoleTab('result');
+      const cooldownSec = (res as any)?.cooldownSeconds ?? attempt?.codeRunCooldownSeconds ?? attempt?.contest?.codeRunCooldownSeconds ?? 5;
+      setCooldownRemaining(cooldownSec);
+      return;
+    } catch (serverErr: any) {
+      // If server returned a specific business error like cooling time active, show it directly without running fallback
+      const serverErrMsg = serverErr.response?.data?.error?.message || serverErr.response?.data?.message || '';
+      if (serverErrMsg.toLowerCase().includes('cooling time') || serverErrMsg.toLowerCase().includes('turned off')) {
+        setRunResult({
+          error: serverErrMsg,
+          overallVerdict: 'COMPILE_ERROR',
+        });
+        setActiveConsoleTab('result');
+        return;
+      }
 
-          setRunResult({
-            isCustomInput: true,
-            input: customInput,
-            stdout: clientRes.stdout,
-            stderr: clientRes.stderr,
-            passed: clientRes.verdict === 'PASSED',
-            verdict: clientRes.verdict,
-            timeMs: clientRes.timeMs,
-          });
-        } else {
-          const sampleCases = activeQuestion?.codingConfig?.sampleTestCases || [];
-          if (sampleCases.length === 0) {
+      // 2. Fallback: In-browser execution if client runner is supported
+      if (isClientRunnable(lang)) {
+        try {
+          if (showCustomInput) {
             const clientRes = await runCodeInBrowser({
               code: currentAnswer.code,
               language: lang,
-              input: '',
+              input: customInput,
             });
+
             setRunResult({
               isCustomInput: true,
-              input: '',
+              input: customInput,
               stdout: clientRes.stdout,
               stderr: clientRes.stderr,
               passed: clientRes.verdict === 'PASSED',
@@ -869,74 +878,72 @@ export default function AttemptPage() {
               timeMs: clientRes.timeMs,
             });
           } else {
-            const evaluatedCases: RunCaseResult[] = [];
-            let passedCount = 0;
-            let firstErrorVerdict: string | null = null;
-
-            for (let i = 0; i < sampleCases.length; i++) {
-              const tc = sampleCases[i];
+            const sampleCases = activeQuestion?.codingConfig?.sampleTestCases || [];
+            if (sampleCases.length === 0) {
               const clientRes = await runCodeInBrowser({
                 code: currentAnswer.code,
                 language: lang,
-                input: tc.input || '',
+                input: '',
               });
-
-              const isMatch = (clientRes.stdout || '').trim() === (tc.expectedOutput || '').trim();
-              const casePassed = clientRes.verdict === 'PASSED' && isMatch;
-              if (casePassed) passedCount++;
-              if (clientRes.verdict !== 'PASSED' && !firstErrorVerdict) {
-                firstErrorVerdict = clientRes.verdict;
-              }
-
-              evaluatedCases.push({
-                caseNumber: i,
-                input: tc.input || '',
-                expectedOutput: tc.expectedOutput || '',
-                actualOutput: clientRes.stdout,
+              setRunResult({
+                isCustomInput: true,
+                input: '',
+                stdout: clientRes.stdout,
                 stderr: clientRes.stderr,
-                verdict: clientRes.verdict !== 'PASSED' ? clientRes.verdict : isMatch ? 'PASSED' : 'FAILED',
-                passed: casePassed,
+                passed: clientRes.verdict === 'PASSED',
+                verdict: clientRes.verdict,
                 timeMs: clientRes.timeMs,
               });
+            } else {
+              const evaluatedCases: RunCaseResult[] = [];
+              let passedCount = 0;
+              let firstErrorVerdict: string | null = null;
+
+              for (let i = 0; i < sampleCases.length; i++) {
+                const tc = sampleCases[i];
+                const clientRes = await runCodeInBrowser({
+                  code: currentAnswer.code,
+                  language: lang,
+                  input: tc.input || '',
+                });
+
+                const isMatch = (clientRes.stdout || '').trim() === (tc.expectedOutput || '').trim();
+                const casePassed = clientRes.verdict === 'PASSED' && isMatch;
+                if (casePassed) passedCount++;
+                if (clientRes.verdict !== 'PASSED' && !firstErrorVerdict) {
+                  firstErrorVerdict = clientRes.verdict;
+                }
+
+                evaluatedCases.push({
+                  caseNumber: i,
+                  input: tc.input || '',
+                  expectedOutput: tc.expectedOutput || '',
+                  actualOutput: clientRes.stdout,
+                  stderr: clientRes.stderr,
+                  verdict: clientRes.verdict !== 'PASSED' ? clientRes.verdict : isMatch ? 'PASSED' : 'FAILED',
+                  passed: casePassed,
+                  timeMs: clientRes.timeMs,
+                });
+              }
+
+              setRunResult({
+                overallVerdict: firstErrorVerdict || (passedCount === sampleCases.length ? 'PASSED' : 'FAILED'),
+                passedCases: passedCount,
+                totalCases: sampleCases.length,
+                cases: evaluatedCases,
+              });
             }
-
-            setRunResult({
-              overallVerdict: firstErrorVerdict || (passedCount === sampleCases.length ? 'PASSED' : 'FAILED'),
-              passedCases: passedCount,
-              totalCases: sampleCases.length,
-              cases: evaluatedCases,
-            });
           }
+          setActiveConsoleTab('result');
+          setCooldownRemaining(5);
+          return;
+        } catch (_clientErr) {
+          // If client fallback also failed, fall through to display the server error
         }
-        setActiveConsoleTab('result');
-        setCooldownRemaining(5); // In-browser execution has minimal 5s local cooldown
-      } catch (err: any) {
-        setRunResult({
-          error: err.message || 'Client Execution Error',
-          overallVerdict: 'COMPILE_ERROR',
-        });
-        setActiveConsoleTab('result');
-      } finally {
-        setRunningCode(false);
       }
-      return;
-    }
 
-    // For compiled languages (Java, C#) or server execution fallback
-    try {
-      const res = await contestApi.runCode(contestId, {
-        questionId: qId,
-        code: currentAnswer.code,
-        language: currentAnswer.language || 'python',
-        customInput: showCustomInput ? customInput : undefined,
-      });
-      setRunResult(res as RunResult);
-      setActiveConsoleTab('result');
-      const cooldownSec = (res as any)?.cooldownSeconds ?? attempt?.codeRunCooldownSeconds ?? attempt?.contest?.codeRunCooldownSeconds ?? 30;
-      setCooldownRemaining(cooldownSec);
-    } catch (err: any) {
       setRunResult({
-        error: err.response?.data?.error?.message || err.message || 'Execution error',
+        error: serverErrMsg || serverErr.message || 'Execution error',
         overallVerdict: 'COMPILE_ERROR',
       });
       setActiveConsoleTab('result');
@@ -952,6 +959,7 @@ export default function AttemptPage() {
     setSubmittingCode(true);
     setSubmitCodeResult(null);
     setRunResult(null);
+    setIsConsoleCollapsed(false);
     setActiveConsoleTab('result');
     setSelectedCaseIdx(0);
     try {

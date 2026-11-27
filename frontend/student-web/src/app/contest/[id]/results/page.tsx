@@ -8,15 +8,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { ResultsSkeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Trophy, Clock, ArrowLeft, CheckCircle2, Award, Sparkles, Calendar, User, ArrowUpDown, Filter, ChevronDown, Check } from 'lucide-react';
-
-const SORT_OPTIONS = [
-  { value: 'score_desc_time_asc', label: 'Highest Score • Shortest Time (Official)', desc: 'Official evaluation standard' },
-  { value: 'score_desc_time_desc', label: 'Highest Score • Longest Time', desc: 'Highest total score with maximum duration' },
-  { value: 'time_asc_score_desc', label: 'Shortest Time • Highest Score', desc: 'Fastest submissions first' },
-  { value: 'score_asc_time_asc', label: 'Lowest Score • Shortest Time', desc: 'Lowest marks with fastest submissions' },
-  { value: 'time_desc_score_asc', label: 'Longest Time • Lowest Score', desc: 'Longest duration with lowest marks' },
-];
+import { Trophy, Clock, ArrowLeft, CheckCircle2, Award, Sparkles, Calendar, User } from 'lucide-react';
 
 interface LeaderboardEntry {
   rank: number;
@@ -43,25 +35,12 @@ export default function ResultsPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [sortFilter, setSortFilter] = useState<'score_desc_time_asc' | 'score_desc_time_desc' | 'time_asc_score_desc' | 'score_asc_time_asc' | 'time_desc_score_asc'>('score_desc_time_asc');
-  const [isSortOpen, setIsSortOpen] = useState(false);
-  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
     if (typeof document !== 'undefined' && document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
-        setIsSortOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const { data: attemptData, isLoading, isError } = useQuery({
@@ -135,31 +114,12 @@ export default function ResultsPage() {
       const aTime = (a.completionTimeSeconds && a.completionTimeSeconds > 0) ? a.completionTimeSeconds : 999999999;
       const bTime = (b.completionTimeSeconds && b.completionTimeSeconds > 0) ? b.completionTimeSeconds : 999999999;
 
-      if (sortFilter === 'score_desc_time_asc') {
-        if (bScore !== aScore) return bScore - aScore;
-        return aTime - bTime;
-      }
-      if (sortFilter === 'score_desc_time_desc') {
-        if (bScore !== aScore) return bScore - aScore;
-        return bTime - aTime;
-      }
-      if (sortFilter === 'time_asc_score_desc') {
-        if (aTime !== bTime) return aTime - bTime;
-        return bScore - aScore;
-      }
-      if (sortFilter === 'score_asc_time_asc') {
-        if (aScore !== bScore) return aScore - bScore;
-        return aTime - bTime;
-      }
-      if (sortFilter === 'time_desc_score_asc') {
-        if (bTime !== aTime) return bTime - aTime;
-        return aScore - bScore;
-      }
-      return 0;
+      if (bScore !== aScore) return bScore - aScore;
+      return aTime - bTime;
     });
 
     return list.map((item, idx) => ({ ...item, displayRank: idx + 1 }));
-  }, [rawEntries, sortFilter, rawAttempt?.userId]);
+  }, [rawEntries, rawAttempt?.userId]);
 
   if (isLoading) {
     return <ResultsSkeleton />;
@@ -373,126 +333,100 @@ export default function ResultsPage() {
 
         {/* Leaderboard */}
         {showTotalPointsEarned && leaderboard.length > 0 && (
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-[#3760F8]" />
-                  <h2 className="text-base font-bold text-slate-900 tracking-tight">Contest Leaderboard</h2>
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-7 shadow-xs">
+            <div className="flex items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100/80 text-[#3760F8] flex items-center justify-center shrink-0">
+                  <Trophy className="w-5 h-5" />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Official Standard: 1. Highest Marks &bull; 2. Fastest Submission Time
-                </p>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight">Contest Leaderboard</h2>
+                  <p className="text-[11px] text-slate-400">
+                    Ranked by highest score &bull; Tiebreaker: shortest completion time
+                  </p>
+                </div>
               </div>
-
-              {/* Custom Sort Filter Dropdown */}
-              <div className="relative" ref={sortDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsSortOpen((prev) => !prev)}
-                  className="flex items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 shadow-2xs focus:outline-hidden focus:ring-2 focus:ring-[#3760F8]/30 transition-all cursor-pointer min-w-[260px] max-w-[340px]"
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <ArrowUpDown className="w-3.5 h-3.5 text-[#3760F8] shrink-0" />
-                    <span className="truncate">{SORT_OPTIONS.find((o) => o.value === sortFilter)?.label}</span>
-                  </div>
-                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isSortOpen ? 'rotate-180 text-[#3760F8]' : ''}`} />
-                </button>
-
-                {isSortOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 w-80 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-3.5 py-1.5 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Ranking &amp; Tie-Breaker Filter
-                    </div>
-                    <div className="py-1">
-                      {SORT_OPTIONS.map((opt) => {
-                        const isSelected = sortFilter === opt.value;
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => {
-                              setSortFilter(opt.value as any);
-                              setIsSortOpen(false);
-                            }}
-                            className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between gap-2 transition-colors cursor-pointer ${
-                              isSelected
-                                ? 'bg-[#EEF2FF] text-[#3760F8] font-bold'
-                                : 'text-slate-700 font-medium hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="flex flex-col">
-                              <span>{opt.label}</span>
-                              <span className="text-[10px] text-slate-400 font-normal">{opt.desc}</span>
-                            </div>
-                            {isSelected && (
-                              <div className="w-5 h-5 rounded-full bg-[#3760F8] text-white flex items-center justify-center shrink-0">
-                                <Check className="w-3 h-3 stroke-[3]" />
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200/80 text-slate-600 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-[#3760F8]" />
+                Official Standings
+              </span>
             </div>
 
             <div className="space-y-2">
-              {leaderboard.slice(0, 10).map((entry, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3.5 p-3 rounded-2xl transition-colors ${
-                    entry.isCurrentUser
-                      ? 'bg-[#EEF2FF] border border-[#C7D2FE]'
-                      : 'bg-slate-50 border border-slate-100 hover:bg-slate-100/60'
-                  }`}
-                >
-                  <span
-                    className={`w-7 h-7 flex items-center justify-center rounded-xl text-xs font-bold ${
-                      (entry.displayRank || entry.rank) === 1
-                        ? 'bg-[#D3FE4F] text-[#0B0F19] shadow-xs'
-                        : (entry.displayRank || entry.rank) <= 3
-                        ? 'bg-[#3760F8] text-white shadow-xs'
-                        : 'bg-white border border-slate-200 text-slate-700'
+              {leaderboard.slice(0, 10).map((entry, i) => {
+                const rankNum = entry.displayRank || entry.rank;
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between gap-2.5 sm:gap-4 px-3.5 py-3 rounded-2xl transition-colors ${
+                      entry.isCurrentUser
+                        ? 'bg-[#EEF2FF] border border-[#C7D2FE]'
+                        : 'bg-slate-50 border border-slate-100 hover:bg-slate-100/60'
                     }`}
                   >
-                    #{entry.displayRank || entry.rank}
-                  </span>
-                  <span className="flex-1 text-sm font-semibold text-slate-800 tracking-tight">
-                    {entry.displayName} {entry.isCurrentUser && <span className="text-xs text-[#3760F8] font-normal ml-1">(You)</span>}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-slate-600 flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-md shadow-2xs" title="Time taken to complete contest">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      {entry.formattedTimeTaken || '—'}
-                    </span>
-                    <span className="text-sm font-extrabold text-[#3760F8] font-mono whitespace-nowrap">
-                      {entry.totalScore} Marks
-                    </span>
+                    {/* Left: Rank & Name */}
+                    <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
+                      <span
+                        className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl text-xs font-bold shrink-0 ${
+                          rankNum === 1
+                            ? 'bg-[#D3FE4F] text-[#0B0F19] shadow-xs'
+                            : rankNum <= 3
+                            ? 'bg-[#3760F8] text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-700'
+                        }`}
+                      >
+                        #{rankNum}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-900 tracking-tight block truncate">
+                          {entry.displayName}
+                          {entry.isCurrentUser && (
+                            <span className="text-[11px] text-[#3760F8] font-bold ml-1.5">(You)</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Time & Score */}
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                      <span
+                        className="text-[11px] sm:text-xs font-mono text-slate-600 flex items-center gap-1 bg-white border border-slate-200 px-2 sm:px-2.5 py-1 rounded-lg shadow-2xs whitespace-nowrap"
+                        title="Time taken to complete contest"
+                      >
+                        <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 shrink-0" />
+                        {entry.formattedTimeTaken || '—'}
+                      </span>
+                      <span className="text-xs sm:text-sm font-extrabold text-[#3760F8] font-mono whitespace-nowrap min-w-[65px] sm:min-w-[80px] text-right">
+                        {entry.totalScore} Marks
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {userLeaderboardEntry && !isInTop10 && (
                 <div className="mt-4 pt-3 border-t border-slate-100">
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
                     Your Current Standings
                   </span>
-                  <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-[#EEF2FF] border border-[#C7D2FE]">
-                    <span className="w-7 h-7 flex items-center justify-center rounded-xl text-xs font-bold bg-[#3760F8] text-white shadow-xs">
-                      #{userLeaderboardEntry.displayRank || userLeaderboardEntry.rank}
-                    </span>
-                    <span className="flex-1 text-sm font-semibold text-slate-800 tracking-tight">
-                      {userLeaderboardEntry.displayName} <span className="text-xs text-[#3760F8] font-normal ml-1">(You)</span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-mono text-slate-600 flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-md shadow-2xs">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <div className="flex items-center justify-between gap-2.5 sm:gap-4 px-3.5 py-3 rounded-2xl bg-[#EEF2FF] border border-[#C7D2FE]">
+                    <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
+                      <span className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl text-xs font-bold bg-[#3760F8] text-white shadow-xs shrink-0">
+                        #{userLeaderboardEntry.displayRank || userLeaderboardEntry.rank}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-900 tracking-tight block truncate">
+                          {userLeaderboardEntry.displayName}{' '}
+                          <span className="text-[11px] text-[#3760F8] font-bold ml-1.5">(You)</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                      <span className="text-[11px] sm:text-xs font-mono text-slate-600 flex items-center gap-1 bg-white border border-slate-200 px-2 sm:px-2.5 py-1 rounded-lg shadow-2xs whitespace-nowrap">
+                        <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 shrink-0" />
                         {userLeaderboardEntry.formattedTimeTaken || '—'}
                       </span>
-                      <span className="text-sm font-extrabold text-[#3760F8] font-mono whitespace-nowrap">
+                      <span className="text-xs sm:text-sm font-extrabold text-[#3760F8] font-mono whitespace-nowrap min-w-[65px] sm:min-w-[80px] text-right">
                         {userLeaderboardEntry.totalScore} Marks
                       </span>
                     </div>
