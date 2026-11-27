@@ -59,7 +59,9 @@ export default function UsersPage() {
       { id: 'all', label: 'All Staff', count: users.length },
     ];
 
-    roles.forEach((r) => {
+    roles
+      .filter((r) => r.id !== 'student' && r.name.toLowerCase() !== 'student')
+      .forEach((r) => {
       const roleKey = r._id || r.id || r.name;
       const count = users.filter((u) => {
         const uRole = (u.role || u.roleId || u.roleName || '').toLowerCase();
@@ -336,11 +338,13 @@ export default function UsersPage() {
             onChange={(e) => setForm((f) => ({ ...f, roleId: e.target.value }))}
           >
             <option value="">Default Operational Admin</option>
-            {roles.map((r) => (
-              <option key={r._id || r.id} value={r._id || r.id}>
-                {r.name}
-              </option>
-            ))}
+            {roles
+              .filter((r) => r.id !== 'student' && r.name.toLowerCase() !== 'student')
+              .map((r) => (
+                <option key={r._id || r.id} value={r._id || r.id}>
+                  {r.name}
+                </option>
+              ))}
           </Select>
           <div className="flex gap-2.5 justify-end pt-2">
             <Button variant="outline" size="sm" onClick={() => setShowCreate(false)}>

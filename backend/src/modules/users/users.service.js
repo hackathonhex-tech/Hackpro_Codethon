@@ -8,8 +8,16 @@ import { env } from '../../config/env.js';
 export class UsersService {
   async getAllUsers(options = {}) {
     let users = await userRepository.find({});
+    // Exclude student accounts from the staff administration list unless explicitly requested
     if (options.role) {
       users = users.filter((u) => u.role === options.role || u.roleId === options.role);
+    } else if (!options.includeStudents) {
+      users = users.filter(
+        (u) =>
+          u.role !== SYSTEM_ROLES.STUDENT &&
+          u.roleId !== SYSTEM_ROLES.STUDENT &&
+          String(u.roleName || '').toLowerCase() !== 'student'
+      );
     }
     if (options.search) {
       const q = options.search.toLowerCase();
@@ -29,10 +37,8 @@ export class UsersService {
   }
 
   async createUser(data) {
-    const existing = await userRepository.findByEmail(data.email);
-    if (existing) {
-      throw ApiError.conflict('A user with this email address already exists');
-    }
+    const emailLower = data.email.toLowerCase().trim();
+    const existing = await userRepository.findByEmail(emailLower);
 
     const roleKey = data.roleId || data.role || SYSTEM_ROLES.ADMIN;
     let role = await roleRepository.findById(roleKey);
@@ -51,9 +57,25 @@ export class UsersService {
     }
 
     const hashedPassword = await hashPassword(data.password);
+
+    if (existing) {
+      // If user already exists (e.g. from candidate roster or previous registration), update their staff credentials & role
+      const updated = await userRepository.update(existing.id, {
+        name: data.name || existing.name,
+        password: hashedPassword,
+        role: role.id === SYSTEM_ROLES.SUPER_ADMIN ? SYSTEM_ROLES.SUPER_ADMIN : (role.id === SYSTEM_ROLES.ADMIN ? SYSTEM_ROLES.ADMIN : 'sub_role'),
+        roleId: role.id,
+        roleName: role.name,
+        contestScope: data.contestScope || existing.contestScope || [],
+        isActive: true,
+      });
+      const { password, ...safeUser } = updated;
+      return safeUser;
+    }
+
     const created = await userRepository.create({
       name: data.name,
-      email: data.email.toLowerCase(),
+      email: emailLower,
       password: hashedPassword,
       role: role.id === SYSTEM_ROLES.SUPER_ADMIN ? SYSTEM_ROLES.SUPER_ADMIN : (role.id === SYSTEM_ROLES.ADMIN ? SYSTEM_ROLES.ADMIN : 'sub_role'),
       roleId: role.id,

@@ -4,10 +4,11 @@ import { getPagination } from '../../utils/pagination.js';
 
 export class UsersController {
   async getAll(req, res) {
-    const { page, limit, skip, formatResponse } = getPagination(req.query);
+    const { page, limit, skip } = getPagination({ limit: 1000, ...req.query });
     const all = await usersService.getAllUsers({
       role: req.query.role,
       search: req.query.search,
+      includeStudents: req.query.includeStudents === 'true',
     });
     const items = all.slice(skip, skip + limit);
     return res.status(200).json({

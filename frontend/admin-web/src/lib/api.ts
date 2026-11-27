@@ -273,7 +273,7 @@ export const submissionsApi = {
 
 export const usersApi = {
   list: async (params?: any) => {
-    const res = await apiClient.get('/users', { params });
+    const res = await apiClient.get('/users', { params: { limit: 1000, ...params } });
     return res.data;
   },
   create: async (data: any) => {
