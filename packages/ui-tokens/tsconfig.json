@@ -1,0 +1,9 @@
+{
+  "extends": "@codeathon/tsconfig/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./",
+    "declaration": true
+  },
+  "include": ["tokens.ts", "tailwind-preset.ts"]
+}

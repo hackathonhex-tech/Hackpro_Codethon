@@ -1,0 +1,190 @@
+{
+  "info": {
+    "name": "Codeathon Platform API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Production-ready Postman collection covering Auth, Users, Roles, Contests, Questions, Student Flow, Proctoring, Attendance, Reports, Submissions."
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Super Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{super_admin_email}}\",\n  \"password\": \"{{super_admin_password}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login (Student)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"CS2026001\",\n  \"password\": \"Student@2026!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Get /me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "me"] }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contests & Sections",
+      "item": [
+        {
+          "name": "List Contests",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/contests", "host": ["{{baseUrl}}"], "path": ["api", "v1", "contests"] }
+          }
+        },
+        {
+          "name": "Adjust Live Timing",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"extensionMinutes\": 15,\n  \"reason\": \"Network latency grace extension\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/contests/{{contest_id}}/timing", "host": ["{{baseUrl}}"], "path": ["api", "v1", "contests", "{{contest_id}}", "timing"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student Test Execution",
+      "item": [
+        {
+          "name": "Get Assigned Contests",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/student/contests", "host": ["{{baseUrl}}"], "path": ["api", "v1", "student", "contests"] }
+          }
+        },
+        {
+          "name": "Start Test Attempt",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/student/contests/{{contest_id}}/start", "host": ["{{baseUrl}}"], "path": ["api", "v1", "student", "contests", "{{contest_id}}", "start"] }
+          }
+        },
+        {
+          "name": "Get Test State",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{student_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/student/contests/{{contest_id}}/state", "host": ["{{baseUrl}}"], "path": ["api", "v1", "student", "contests", "{{contest_id}}", "state"] }
+          }
+        },
+        {
+          "name": "Autosave Answer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{question_id}}\",\n  \"selectedOptions\": [\"opt_1_2\"],\n  \"isMarkedForReview\": false\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/student/contests/{{contest_id}}/answers", "host": ["{{baseUrl}}"], "path": ["api", "v1", "student", "contests", "{{contest_id}}", "answers"] }
+          }
+        },
+        {
+          "name": "Run Sample Test Cases",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{coding_question_id}}\",\n  \"language\": \"javascript\",\n  \"code\": \"console.log('0 1');\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/student/contests/{{contest_id}}/run", "host": ["{{baseUrl}}"], "path": ["api", "v1", "student", "contests", "{{contest_id}}", "run"] }
+          }
+        },
+        {
+          "name": "Final Submit Attempt",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"user_submit\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/student/contests/{{contest_id}}/finish", "host": ["{{baseUrl}}"], "path": ["api", "v1", "student", "contests", "{{contest_id}}", "finish"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Super Admin Submissions & Revocation",
+      "item": [
+        {
+          "name": "List Locked Submissions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/submissions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "submissions"] }
+          }
+        },
+        {
+          "name": "Revoke Submission with Reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attemptId\": \"{{attempt_id}}\",\n  \"reason\": \"Approved restart for verified technical issue\",\n  \"extensionMinutes\": 10\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/submissions/revoke", "host": ["{{baseUrl}}"], "path": ["api", "v1", "submissions", "revoke"] }
+          }
+        }
+      ]
+    }
+  ]
+}

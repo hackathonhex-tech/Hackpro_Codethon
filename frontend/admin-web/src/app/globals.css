@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand Primary: Cobalt / Enterprise Blue */
+  --color-primary: #3760F8;
+  --color-primary-hover: #254EDB;
+  --color-primary-light: #EEF2FF;
+  
+  /* Brand Secondary: Neutral Slate */
+  --color-secondary: #475569;
+  --color-secondary-hover: #334155;
+  --color-secondary-subtle: #F1F5F9;
+
+  /* Base & Ink */
+  --color-base: #3760F8;
+  --color-ink-primary: #0B0F19;
+  --color-ink-secondary: #1E293B;
+  --color-ink-muted: #64748B;
+  --color-ink-disabled: #94A3B8;
+  --color-ink-inverse: #FFFFFF;
+
+  /* Surfaces & Lines */
+  --color-paper: #FFFFFF;
+  --color-paper-subtle: #F8FAFC;
+  --color-paper-muted: #F1F5F9;
+  --color-line-subtle: #F1F5F9;
+  --color-line: #E2E8F0;
+  --color-line-strong: #CBD5E1;
+  --color-line-focus: #3760F8;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Manrope', var(--font-manrope), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    font-family: 'Manrope', var(--font-manrope), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    @apply bg-slate-50 text-slate-900 antialiased selection:bg-[#3760F8] selection:text-white;
+    letter-spacing: -0.011em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    @apply font-semibold tracking-tight text-slate-900;
+  }
+}
+
+@layer utilities {
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .min-h-tap {
+    min-height: 44px;
+  }
+
+  .min-w-tap {
+    min-width: 44px;
+  }
+
+  .badge-neon {
+    background-color: #D3FE4F;
+    color: #172554;
+    font-weight: 600;
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 25px -4px rgba(55, 96, 248, 0.35);
+  }
+
+  .glow-neon {
+    box-shadow: 0 0 20px -3px rgba(211, 254, 79, 0.45);
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
+  }
+}

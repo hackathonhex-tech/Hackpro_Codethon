@@ -1,0 +1,26 @@
+{
+  "name": "codeathon-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "backend",
+    "frontend/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=backend run dev",
+    "dev:student": "npm --workspace=student-web run dev",
+    "dev:admin": "npm --workspace=admin-web run dev",
+    "dev": "concurrently \"npm:dev:backend\" \"npm:dev:student\" \"npm:dev:admin\"",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "seed": "npm --workspace=backend run seed",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}

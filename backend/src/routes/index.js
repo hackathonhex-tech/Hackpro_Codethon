@@ -1,0 +1,44 @@
+import { Router } from 'express';
+import authRoutes from '../modules/auth/auth.routes.js';
+import usersRoutes from '../modules/users/users.routes.js';
+import rolesRoutes from '../modules/roles/roles.routes.js';
+import participantsRoutes from '../modules/participants/participants.routes.js';
+import teamsRoutes from '../modules/teams/teams.routes.js';
+import assignmentsRoutes from '../modules/assignments/assignments.routes.js';
+import contestsRoutes from '../modules/contests/contests.routes.js';
+import sectionsRoutes from '../modules/sections/sections.routes.js';
+import questionsRoutes from '../modules/questions/questions.routes.js';
+import rubricsRoutes from '../modules/rubrics/rubrics.routes.js';
+import studentContestsRoutes from '../modules/attempts/attempts.routes.js';
+import proctoringRoutes from '../modules/proctoring/proctoring.routes.js';
+import leaderboardRoutes from '../modules/leaderboard/leaderboard.routes.js';
+import attendanceRoutes from '../modules/attendance/attendance.routes.js';
+import analyticsRoutes from '../modules/analytics/analytics.routes.js';
+import reportsRoutes from '../modules/reports/reports.routes.js';
+import submissionsRoutes from '../modules/submissions/submissions.routes.js';
+import auditRoutes from '../modules/audit/audit.routes.js';
+import invitationsRoutes from '../modules/invitations/invitations.routes.js';
+
+const router = Router();
+
+router.use('/auth', authRoutes);
+router.use('/users', usersRoutes);
+router.use('/roles', rolesRoutes);
+router.use('/participants', participantsRoutes);
+router.use('/teams', teamsRoutes);
+router.use('/assignments', assignmentsRoutes);
+router.use('/contests/:contestId/invitations', invitationsRoutes);
+router.use('/contests', contestsRoutes);
+router.use('/sections', sectionsRoutes);
+router.use('/questions', questionsRoutes);
+router.use('/rubrics', rubricsRoutes);
+router.use('/student/contests', studentContestsRoutes);
+router.use('/proctor', proctoringRoutes);
+router.use('/leaderboard', leaderboardRoutes);
+router.use('/attendance', attendanceRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/reports', reportsRoutes);
+router.use('/submissions', submissionsRoutes);
+router.use('/audit-logs', auditRoutes);
+
+export default router;

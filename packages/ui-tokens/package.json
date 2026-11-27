@@ -1,0 +1,30 @@
+{
+  "name": "@codeathon/ui-tokens",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./tokens.ts",
+      "import": "./tokens.ts",
+      "default": "./tokens.ts"
+    },
+    "./preset": {
+      "types": "./tailwind-preset.ts",
+      "import": "./tailwind-preset.ts",
+      "default": "./tailwind-preset.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@codeathon/tsconfig": "*",
+    "tailwindcss": "^3.4.3",
+    "typescript": "^5.4.5"
+  }
+}

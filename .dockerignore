@@ -1,0 +1,16 @@
+node_modules
+*/node_modules
+*/*/node_modules
+.git
+.next
+*/.next
+*/*/.next
+dist
+*/dist
+coverage
+backend/.env
+frontend/*/.env.local
+backend/data/*.json
+*.log
+TESTING_REPORT_20_TYPES.md
+HACKPRO_Rubrics_and_Scoring_Workflow.pdf

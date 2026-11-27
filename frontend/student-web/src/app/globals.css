@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand Primary: Cobalt / Enterprise Blue */
+  --color-primary: #3760F8;
+  --color-primary-hover: #254EDB;
+  --color-primary-light: #EEF2FF;
+  
+  /* Brand Secondary: Neutral Slate */
+  --color-secondary: #475569;
+  --color-secondary-hover: #334155;
+  --color-secondary-subtle: #F1F5F9;
+
+  /* Base & Ink */
+  --color-base: #3760F8;
+  --color-ink-primary: #0B0F19;
+  --color-ink-secondary: #1E293B;
+  --color-ink-muted: #64748B;
+  --color-ink-disabled: #94A3B8;
+  --color-ink-inverse: #FFFFFF;
+
+  /* Surfaces & Lines */
+  --color-paper: #FFFFFF;
+  --color-paper-subtle: #F8FAFC;
+  --color-paper-muted: #F1F5F9;
+  --color-line-subtle: #F1F5F9;
+  --color-line: #E2E8F0;
+  --color-line-strong: #CBD5E1;
+  --color-line-focus: #3760F8;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Manrope', var(--font-manrope), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    font-family: 'Manrope', var(--font-manrope), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    @apply bg-slate-50 text-slate-900 antialiased selection:bg-[#3760F8] selection:text-white;
+    letter-spacing: -0.011em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    @apply font-semibold tracking-tight text-slate-900;
+  }
+}
+
+@layer utilities {
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .min-h-tap {
+    min-height: 44px;
+  }
+
+  .min-w-tap {
+    min-width: 44px;
+  }
+
+  .badge-neon {
+    background-color: #D3FE4F;
+    color: #172554;
+    font-weight: 600;
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 25px -4px rgba(55, 96, 248, 0.35);
+  }
+
+  .glow-neon {
+    box-shadow: 0 0 20px -3px rgba(211, 254, 79, 0.45);
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
+  }
+
+  /* ============================================================
+     DARK COMPILER / CODE EDITOR SCROLLBAR THEME
+     Matches GitHub Dark / HackerRank / VS Code Dark (#0D1117 / #161B22)
+     ============================================================ */
+  .dark-scrollbar,
+  .bg-\[\#0D1117\],
+  .bg-\[\#090D16\],
+  .bg-\[\#161B22\],
+  [data-theme='dark'],
+  textarea.font-mono,
+  pre.font-mono,
+  .compiler-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #30363D #0D1117;
+    color-scheme: dark;
+  }
+
+  .dark-scrollbar::-webkit-scrollbar,
+  .bg-\[\#0D1117\]::-webkit-scrollbar,
+  .bg-\[\#090D16\]::-webkit-scrollbar,
+  .bg-\[\#161B22\]::-webkit-scrollbar,
+  [data-theme='dark']::-webkit-scrollbar,
+  textarea.font-mono::-webkit-scrollbar,
+  pre.font-mono::-webkit-scrollbar,
+  .compiler-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    background-color: #0D1117;
+  }
+
+  .dark-scrollbar::-webkit-scrollbar-track,
+  .bg-\[\#0D1117\]::-webkit-scrollbar-track,
+  .bg-\[\#090D16\]::-webkit-scrollbar-track,
+  .bg-\[\#161B22\]::-webkit-scrollbar-track,
+  [data-theme='dark']::-webkit-scrollbar-track,
+  textarea.font-mono::-webkit-scrollbar-track,
+  pre.font-mono::-webkit-scrollbar-track,
+  .compiler-scrollbar::-webkit-scrollbar-track {
+    background-color: #0D1117;
+    border-radius: 6px;
+  }
+
+  .dark-scrollbar::-webkit-scrollbar-thumb,
+  .bg-\[\#0D1117\]::-webkit-scrollbar-thumb,
+  .bg-\[\#090D16\]::-webkit-scrollbar-thumb,
+  .bg-\[\#161B22\]::-webkit-scrollbar-thumb,
+  [data-theme='dark']::-webkit-scrollbar-thumb,
+  textarea.font-mono::-webkit-scrollbar-thumb,
+  pre.font-mono::-webkit-scrollbar-thumb,
+  .compiler-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #30363D;
+    border-radius: 6px;
+    border: 2px solid #0D1117;
+  }
+
+  .dark-scrollbar::-webkit-scrollbar-thumb:hover,
+  .bg-\[\#0D1117\]::-webkit-scrollbar-thumb:hover,
+  .bg-\[\#090D16\]::-webkit-scrollbar-thumb:hover,
+  .bg-\[\#161B22\]::-webkit-scrollbar-thumb:hover,
+  [data-theme='dark']::-webkit-scrollbar-thumb:hover,
+  textarea.font-mono::-webkit-scrollbar-thumb:hover,
+  pre.font-mono::-webkit-scrollbar-thumb:hover,
+  .compiler-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #58A6FF;
+  }
+
+  .dark-scrollbar::-webkit-scrollbar-thumb:active,
+  .bg-\[\#0D1117\]::-webkit-scrollbar-thumb:active,
+  .bg-\[\#090D16\]::-webkit-scrollbar-thumb:active,
+  .bg-\[\#161B22\]::-webkit-scrollbar-thumb:active,
+  [data-theme='dark']::-webkit-scrollbar-thumb:active,
+  textarea.font-mono::-webkit-scrollbar-thumb:active,
+  pre.font-mono::-webkit-scrollbar-thumb:active,
+  .compiler-scrollbar::-webkit-scrollbar-thumb:active {
+    background-color: #388BFD;
+  }
+
+  .dark-scrollbar::-webkit-scrollbar-corner,
+  .bg-\[\#0D1117\]::-webkit-scrollbar-corner,
+  .bg-\[\#090D16\]::-webkit-scrollbar-corner,
+  .bg-\[\#161B22\]::-webkit-scrollbar-corner,
+  [data-theme='dark']::-webkit-scrollbar-corner,
+  textarea.font-mono::-webkit-scrollbar-corner,
+  pre.font-mono::-webkit-scrollbar-corner,
+  .compiler-scrollbar::-webkit-scrollbar-corner {
+    background-color: #0D1117;
+  }
+}
