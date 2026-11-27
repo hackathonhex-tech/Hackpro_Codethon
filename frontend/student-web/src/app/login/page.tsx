@@ -57,7 +57,11 @@ export default function LoginPage() {
       if (result.targetPortal === 'admin' || (result.user.role !== 'student' && result.user.role !== 'candidate')) {
         startNavigation('Redirecting to Admin Portal...');
         const redirect = result.redirectPath || '/dashboard';
-        const adminBaseUrl = process.env.NEXT_PUBLIC_ADMIN_PORTAL_URL ?? 'http://localhost:3001';
+        const adminBaseUrl =
+          process.env.NEXT_PUBLIC_ADMIN_PORTAL_URL ??
+          (typeof window !== 'undefined' && window.location.hostname.includes('hackpro.in')
+            ? 'https://admin.hackpro.in'
+            : 'http://localhost:3001');
         const adminUrl = `${adminBaseUrl}/login?autoToken=${encodeURIComponent(result.accessToken)}&userData=${encodeURIComponent(JSON.stringify(result.user))}&redirect=${encodeURIComponent(redirect)}`;
         window.location.href = adminUrl;
         return;
@@ -70,7 +74,9 @@ export default function LoginPage() {
       const msg =
         err?.response?.data?.message ??
         err?.response?.data?.error?.message ??
-        'Invalid credentials. Please verify your email / Employee ID and password.';
+        (err?.message?.includes('Network Error')
+          ? 'Network or server connection error. Please try again.'
+          : 'Invalid credentials. Please verify your email / Employee ID and password.');
       setServerError(msg);
       setIsLoading(false);
     }

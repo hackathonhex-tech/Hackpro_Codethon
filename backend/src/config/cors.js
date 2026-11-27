@@ -11,7 +11,9 @@ export const corsOptions = {
       allowed.includes(origin) ||
       allowed.includes('*') ||
       origin.endsWith('.vercel.app') ||
-      origin.includes('vercel.app')
+      origin.includes('vercel.app') ||
+      origin.endsWith('.hackpro.in') ||
+      origin.includes('hackpro.in')
     ) {
       return callback(null, true);
     }

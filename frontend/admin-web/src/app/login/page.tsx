@@ -52,7 +52,11 @@ export default function AdminLoginPage() {
       if (result.targetPortal === 'student' || result.user.role === 'student' || result.user.role === 'candidate') {
         startNavigation('Redirecting to Candidate Portal...');
         const redirect = result.redirectPath || '/dashboard';
-        const studentBaseUrl = process.env.NEXT_PUBLIC_STUDENT_PORTAL_URL ?? 'http://localhost:3000';
+        const studentBaseUrl =
+          process.env.NEXT_PUBLIC_STUDENT_PORTAL_URL ??
+          (typeof window !== 'undefined' && window.location.hostname.includes('hackpro.in')
+            ? 'https://contest.hackpro.in'
+            : 'http://localhost:3000');
         const studentUrl = `${studentBaseUrl}/login?autoToken=${encodeURIComponent(result.accessToken)}&userData=${encodeURIComponent(JSON.stringify(result.user))}&redirect=${encodeURIComponent(redirect)}`;
         window.location.href = studentUrl;
         return;
