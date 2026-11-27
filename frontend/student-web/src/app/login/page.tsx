@@ -8,7 +8,7 @@ import { loginSchema, type LoginInput } from '@codeathon/shared';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigation } from '@/components/ui/NavigationLoader';
-import { Eye, EyeOff, Loader2, User, Lock, AlertCircle, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Loader2, User, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -77,23 +77,13 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0B1120] via-[#0F172A] to-[#0A0E1A] p-4 sm:p-6 font-sans relative overflow-hidden">
-      {/* Dynamic Ambient Background Glows */}
-      <div className="absolute -top-32 -left-32 w-80 sm:w-96 h-80 sm:h-96 bg-[#3760F8]/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-80 sm:w-96 h-80 sm:h-96 bg-[#60A5FA]/15 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="w-full max-w-[440px] bg-white/95 backdrop-blur-xl rounded-3xl border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.25)] p-6 sm:p-9 space-y-6 relative z-10 transition-all">
+    <main className="min-h-screen flex items-center justify-center bg-white p-4 sm:p-6 font-sans">
+      <div className="w-full max-w-[420px] bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-8 space-y-6">
         
-        {/* Brand Badge & Header */}
+        {/* Brand Logo & Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100/80 text-[#3760F8] text-[11px] font-bold tracking-wide uppercase shadow-2xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#3760F8]" />
-            <span>Official Candidate Portal</span>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="HACKPRO" className="h-10 w-auto object-contain" />
-            <span className="text-xl font-extrabold tracking-tight text-slate-900">HACKPRO</span>
+          <div className="flex justify-center">
+            <img src="/logo.png" alt="HACKPRO" className="h-12 w-auto object-contain" />
           </div>
 
           <div className="space-y-1">
@@ -192,17 +182,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* Security & Support Footer */}
-        <div className="pt-2 border-t border-slate-100 flex flex-col items-center text-center space-y-1.5">
-          <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
-            <Lock className="w-3 h-3 text-slate-400" />
-            <span>256-bit Secure Assessment • AI Proctoring Monitored</span>
-          </p>
-          <p className="text-[11px] text-slate-400">
-            Need assistance? Contact your test administrator or coordinator.
-          </p>
-        </div>
       </div>
     </main>
   );
