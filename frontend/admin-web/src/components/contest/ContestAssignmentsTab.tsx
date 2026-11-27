@@ -91,7 +91,7 @@ export function ContestAssignmentsTab({ contestId }: { contestId: string }) {
 
   const { data: participantsData, isLoading: pLoading } = useQuery({
     queryKey: ['participants-all'],
-    queryFn: () => participantsApi.list({ limit: 500 }),
+    queryFn: () => participantsApi.list({ limit: 5000 }),
   });
   const participants: Participant[] = (participantsData as { data?: Participant[] })?.data || [];
 
@@ -279,10 +279,16 @@ export function ContestAssignmentsTab({ contestId }: { contestId: string }) {
                   <Button
                     size="sm"
                     className="text-xs h-7 px-3 bg-[#3760F8] hover:bg-[#254EDB]"
-                    disabled={selectedCandidates.length === 0 || assignMutation.isPending}
-                    onClick={handleBulkAssignCandidates}
+                    disabled={unassignedCandidates.length === 0 || assignMutation.isPending}
+                    loading={assignMutation.isPending}
+                    onClick={() => {
+                      const targets = selectedCandidates.length > 0 ? selectedCandidates : unassignedCandidates.map(getPId);
+                      assignMutation.mutate({ participantIds: targets, teamIds: [] });
+                    }}
                   >
-                    Assign Selected ({selectedCandidates.length})
+                    {selectedCandidates.length > 0
+                      ? `Assign Selected (${selectedCandidates.length})`
+                      : `Assign All (${unassignedCandidates.length})`}
                   </Button>
                 </div>
               )}
@@ -290,7 +296,7 @@ export function ContestAssignmentsTab({ contestId }: { contestId: string }) {
 
             <div className="mb-3">
               <Input
-                placeholder="Search candidates by name, Employee ID, or email..."
+                placeholder="Search candidates by name, Superset ID, or email..."
                 value={candidateSearch}
                 onChange={(e) => setCandidateSearch(e.target.value)}
               />

@@ -39,29 +39,40 @@ export class AssignmentsService {
 
   async assign(contestId, participantIds = [], teamIds = []) {
     const created = [];
+    const existingAssignments = await assignmentRepository.findByContest(contestId);
+    const existingParticipantSet = new Set(
+      existingAssignments.map((a) => String(a.participantId))
+    );
+    const existingTeamSet = new Set(
+      existingAssignments.map((a) => String(a.teamId))
+    );
+
+    const now = new Date().toISOString();
 
     for (const pId of participantIds) {
-      const existing = await assignmentRepository.findOne({ contestId, participantId: pId });
-      if (!existing) {
+      const sId = String(pId);
+      if (!existingParticipantSet.has(sId)) {
         const item = await assignmentRepository.create({
           contestId,
-          participantId: pId,
+          participantId: sId,
           teamId: null,
-          assignedAt: new Date().toISOString(),
+          assignedAt: now,
         });
+        existingParticipantSet.add(sId);
         created.push(item);
       }
     }
 
     for (const tId of teamIds) {
-      const existing = await assignmentRepository.findOne({ contestId, teamId: tId });
-      if (!existing) {
+      const sId = String(tId);
+      if (!existingTeamSet.has(sId)) {
         const item = await assignmentRepository.create({
           contestId,
           participantId: null,
-          teamId: tId,
-          assignedAt: new Date().toISOString(),
+          teamId: sId,
+          assignedAt: now,
         });
+        existingTeamSet.add(sId);
         created.push(item);
       }
     }
