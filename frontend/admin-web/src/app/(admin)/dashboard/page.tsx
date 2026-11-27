@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsApi, contestsApi } from '@/lib/api';
 import { Spinner } from '@/components/ui/Spinner';
@@ -67,6 +67,16 @@ export default function DashboardPage() {
     retry: 1,
   });
   const contests: Contest[] = (contestsData as { data?: Contest[] })?.data || [];
+
+  // Automatically default to the active/live contest so metrics match the active contest
+  useEffect(() => {
+    if (!selectedContest && contests.length > 0) {
+      const active = (contests as any[]).find((c) => c.status === 'live') || contests[0];
+      if (active?._id) {
+        setSelectedContest(active._id);
+      }
+    }
+  }, [contests, selectedContest]);
 
   const {
     data: statsData,

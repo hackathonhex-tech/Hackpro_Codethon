@@ -12,7 +12,8 @@ export class AssignmentsService {
     const allParticipants = await participantRepository.find({});
     const allTeams = await teamRepository.find({});
 
-    return list.map((a) => {
+    const validList = [];
+    for (const a of list) {
       let participant = null;
       let team = null;
       if (a.participantId) {
@@ -21,12 +22,19 @@ export class AssignmentsService {
       if (a.teamId) {
         team = allTeams.find((t) => t.id === a.teamId) || null;
       }
-      return {
+      // If candidate/team was deleted, remove the stale assignment
+      if (!participant && !team) {
+        if (a.id) assignmentRepository.delete(a.id).catch(() => {});
+        continue;
+      }
+      validList.push({
         ...a,
         participant,
         team,
-      };
-    });
+      });
+    }
+
+    return validList;
   }
 
   async assign(contestId, participantIds = [], teamIds = []) {

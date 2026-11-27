@@ -5,6 +5,7 @@ import { questionRepository } from '../questions/questions.repository.js';
 import { submissionRepository } from '../submissions/submissions.repository.js';
 import { proctorEventRepository } from '../proctoring/proctoring.repository.js';
 import { participantRepository } from '../participants/participants.repository.js';
+import { teamRepository } from '../teams/teams.repository.js';
 import { toCsv } from '../../utils/csv.js';
 
 export class AnalyticsService {
@@ -20,7 +21,19 @@ export class AnalyticsService {
       ? await assignmentRepository.findByContest(contestId)
       : await assignmentRepository.find({});
 
-    const totalRegistered = assignments.length || attempts.length;
+    const allParticipants = await participantRepository.find({});
+    const participantIdSet = new Set(allParticipants.map((p) => p.id));
+    const allTeams = await teamRepository.find({});
+    const teamIdSet = new Set(allTeams.map((t) => t.id));
+
+    // Only count assignments belonging to currently available, active candidates or teams
+    const validAssignments = assignments.filter((a) => {
+      if (a.participantId) return participantIdSet.has(a.participantId);
+      if (a.teamId) return teamIdSet.has(a.teamId);
+      return false;
+    });
+
+    const totalRegistered = validAssignments.length;
     const started = attempts.length;
     const currentlyAttempting = attempts.filter((a) => a.status === 'in_progress').length;
     const submitted = attempts.filter((a) => a.status === 'submitted').length;
