@@ -397,48 +397,55 @@ export class InvitationsService {
     let failCount = 0;
     const results = [];
 
-    for (const p of targets) {
-      try {
-        const messageId = await this.sendSingleEmail({
-          toEmail: p.email,
-          toName: p.name,
-          batchCode: contest.batchCode || '—',
-          contestTitle: contest.title,
-          portalUrl,
-          durationMinutes: contest.durationMinutes,
-        });
+    // Send in controlled concurrent chunks of 5 for optimal speed and API rate-limit adherence
+    const CONCURRENCY = 5;
+    for (let i = 0; i < targets.length; i += CONCURRENCY) {
+      const chunk = targets.slice(i, i + CONCURRENCY);
+      await Promise.all(
+        chunk.map(async (p) => {
+          try {
+            const messageId = await this.sendSingleEmail({
+              toEmail: p.email,
+              toName: p.name,
+              batchCode: contest.batchCode || '—',
+              contestTitle: contest.title,
+              portalUrl,
+              durationMinutes: contest.durationMinutes,
+            });
 
-        await invitationLogRepository.upsertLog(contestId, p.participantId, {
-          email: p.email,
-          name: p.name,
-          rollNumber: p.rollNumber,
-          batchCode: contest.batchCode || '—',
-          status: 'delivered',
-          messageId,
-          errorMsg: null,
-          sentAt: new Date().toISOString(),
-        });
+            await invitationLogRepository.upsertLog(contestId, p.participantId, {
+              email: p.email,
+              name: p.name,
+              rollNumber: p.rollNumber,
+              batchCode: contest.batchCode || '—',
+              status: 'delivered',
+              messageId,
+              errorMsg: null,
+              sentAt: new Date().toISOString(),
+            });
 
-        successCount++;
-        results.push({ participantId: p.participantId, email: p.email, status: 'delivered', messageId });
-      } catch (err) {
-        logger.error(`Failed to send invitation to ${p.email}:`, err);
-        const errorMsg = err.message || 'Unknown delivery failure';
+            successCount++;
+            results.push({ participantId: p.participantId, email: p.email, status: 'delivered', messageId });
+          } catch (err) {
+            logger.error(`Failed to send invitation to ${p.email}:`, err);
+            const errorMsg = err.message || 'Unknown delivery failure';
 
-        await invitationLogRepository.upsertLog(contestId, p.participantId, {
-          email: p.email,
-          name: p.name,
-          rollNumber: p.rollNumber,
-          batchCode: contest.batchCode || '—',
-          status: 'failed',
-          messageId: null,
-          errorMsg,
-          sentAt: new Date().toISOString(),
-        });
+            await invitationLogRepository.upsertLog(contestId, p.participantId, {
+              email: p.email,
+              name: p.name,
+              rollNumber: p.rollNumber,
+              batchCode: contest.batchCode || '—',
+              status: 'failed',
+              messageId: null,
+              errorMsg,
+              sentAt: new Date().toISOString(),
+            });
 
-        failCount++;
-        results.push({ participantId: p.participantId, email: p.email, status: 'failed', error: errorMsg });
-      }
+            failCount++;
+            results.push({ participantId: p.participantId, email: p.email, status: 'failed', error: errorMsg });
+          }
+        })
+      );
     }
 
     // Log action to audit logs

@@ -38,6 +38,13 @@ function InvitationsContent() {
   const [previewCandidate, setPreviewCandidate] = useState<any>(null);
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
   const [actionErrorMsg, setActionErrorMsg] = useState('');
+  const [batchProgress, setBatchProgress] = useState<{
+    inProgress: boolean;
+    currentBatch: number;
+    totalBatches: number;
+    sentCount: number;
+    totalCount: number;
+  } | null>(null);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -111,6 +118,73 @@ function InvitationsContent() {
       setTimeout(() => setActionErrorMsg(''), 6000);
     },
   });
+
+  const handleSendBatches = async (idsToSend?: string[]) => {
+    if (!activeContestId) return;
+
+    let targets: string[] = [];
+    if (idsToSend && idsToSend.length > 0) {
+      targets = idsToSend;
+    } else {
+      targets = participants
+        .filter((p) => p.invitationStatus !== 'delivered')
+        .map((p) => String(p.participantId));
+    }
+
+    if (targets.length === 0) {
+      setActionErrorMsg('No eligible pending candidates found to send invitations.');
+      setTimeout(() => setActionErrorMsg(''), 4000);
+      return;
+    }
+
+    const BATCH_SIZE = 20;
+    const chunks: string[][] = [];
+    for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+      chunks.push(targets.slice(i, i + BATCH_SIZE));
+    }
+
+    setActionErrorMsg('');
+    setActionSuccessMsg('');
+    setBatchProgress({
+      inProgress: true,
+      currentBatch: 1,
+      totalBatches: chunks.length,
+      sentCount: 0,
+      totalCount: targets.length,
+    });
+
+    let totalDispatched = 0;
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      setBatchProgress({
+        inProgress: true,
+        currentBatch: i + 1,
+        totalBatches: chunks.length,
+        sentCount: totalDispatched,
+        totalCount: targets.length,
+      });
+
+      try {
+        const res: any = await invitationsApi.send(activeContestId, chunk);
+        const successful = res?.data?.successful ?? res?.successful ?? chunk.length;
+        totalDispatched += successful;
+        queryClient.invalidateQueries({ queryKey: ['contest-invitations', activeContestId] });
+      } catch (err: any) {
+        const msg = err.response?.data?.error?.message || err.message || 'Invitation dispatch error';
+        setActionErrorMsg(`Batch ${i + 1}/${chunks.length} stopped: ${msg}. Dispatched ${totalDispatched} emails before pausing.`);
+        setBatchProgress(null);
+        queryClient.invalidateQueries({ queryKey: ['contest-invitations', activeContestId] });
+        return;
+      }
+    }
+
+    setBatchProgress(null);
+    setSelectedParticipantIds(new Set());
+    setActionSuccessMsg(`All invitations processed: successfully dispatched ${totalDispatched} emails in ${chunks.length} safe batches.`);
+    setTimeout(() => setActionSuccessMsg(''), 7000);
+    queryClient.invalidateQueries({ queryKey: ['contest-invitations', activeContestId] });
+  };
 
   const contestMeta = invitationData?.contest;
   const stats = invitationData?.stats || { total: 0, delivered: 0, pending: 0, failed: 0 };
@@ -263,6 +337,34 @@ function InvitationsContent() {
         </div>
       )}
 
+      {batchProgress && (
+        <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-2xs space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold">
+            <span className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-[#3760F8] animate-spin" />
+              <span>Sending Invitations in Safe Batches...</span>
+            </span>
+            <span className="font-mono text-indigo-700">
+              Batch {batchProgress.currentBatch} of {batchProgress.totalBatches} ({Math.round((batchProgress.currentBatch / batchProgress.totalBatches) * 100)}%)
+            </span>
+          </div>
+          <div className="w-full bg-indigo-200/60 rounded-full h-2.5 overflow-hidden">
+            <div
+              className="bg-[#3760F8] h-2.5 rounded-full transition-all duration-300"
+              style={{
+                width: `${Math.min(100, Math.round((batchProgress.currentBatch / batchProgress.totalBatches) * 100))}%`,
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-indigo-700 font-medium">
+            <span>
+              Dispatched <strong>{batchProgress.sentCount}</strong> of <strong>{batchProgress.totalCount}</strong> emails safely (20 per batch)
+            </span>
+            <span className="text-slate-500 italic">Please keep this browser window open</span>
+          </div>
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
@@ -326,31 +428,32 @@ function InvitationsContent() {
           <div className="flex items-center gap-2.5 flex-wrap">
             {selectedParticipantIds.size > 0 && (
               <button
-                onClick={() =>
-                  sendMutation.mutate({
-                    contestId: activeContestId,
-                    ids: Array.from(selectedParticipantIds),
-                  })
-                }
-                disabled={sendMutation.isPending}
+                onClick={() => handleSendBatches(Array.from(selectedParticipantIds))}
+                disabled={Boolean(batchProgress?.inProgress) || sendMutation.isPending}
                 className="px-4 py-2 rounded-xl bg-[#3760F8] text-white text-xs font-bold hover:bg-[#254EDB] transition flex items-center gap-1.5 shadow-sm disabled:opacity-60 cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>
-                  {sendMutation.isPending
-                    ? 'Sending...'
+                  {batchProgress?.inProgress
+                    ? 'Processing Batches...'
                     : `Send to Selected (${selectedParticipantIds.size})`}
                 </span>
               </button>
             )}
 
             <button
-              onClick={() => sendMutation.mutate({ contestId: activeContestId })}
-              disabled={sendMutation.isPending || stats.total === 0}
+              onClick={() => handleSendBatches()}
+              disabled={Boolean(batchProgress?.inProgress) || sendMutation.isPending || stats.total === 0 || stats.pending === 0}
               className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition flex items-center gap-1.5 shadow-sm disabled:opacity-60 cursor-pointer"
             >
               <Mail className="w-3.5 h-3.5" />
-              <span>{sendMutation.isPending ? 'Sending All...' : 'Send to All Participants'}</span>
+              <span>
+                {batchProgress?.inProgress
+                  ? `Sending Batch ${batchProgress.currentBatch}/${batchProgress.totalBatches}...`
+                  : stats.pending === 0
+                  ? 'All Invitations Sent'
+                  : `Send to All (${stats.pending} Pending)`}
+              </span>
             </button>
 
             {stats.failed > 0 && (
