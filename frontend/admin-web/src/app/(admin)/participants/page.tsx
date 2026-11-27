@@ -48,6 +48,7 @@ export default function ParticipantsPage() {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [parsedPreview, setParsedPreview] = useState<any[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [form, setForm] = useState({ rollNumber: '', name: '', email: '', department: '', password: '' });
 
@@ -103,6 +104,19 @@ export default function ParticipantsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['participants'] });
       setDeleteId(null);
+    },
+  });
+
+  const deleteAllMutation = useMutation({
+    mutationFn: () => participantsApi.deleteAll(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['participants'] });
+      setShowDeleteAllConfirm(false);
+      setPage(1);
+    },
+    onError: (err: any) => {
+      setErrorMsg(getErrorMessage(err, 'Failed to delete all candidates'));
+      setShowDeleteAllConfirm(false);
     },
   });
 
@@ -276,6 +290,17 @@ export default function ParticipantsPage() {
           <Button size="sm" onClick={openCreate} leftIcon={<Plus className="w-3.5 h-3.5" />}>
             Add Candidate
           </Button>
+          {participants.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:border-rose-300"
+              onClick={() => setShowDeleteAllConfirm(true)}
+              leftIcon={<Trash2 className="w-3.5 h-3.5 text-rose-500" />}
+            >
+              Delete All
+            </Button>
+          )}
         </div>
       </div>
 
@@ -482,7 +507,7 @@ export default function ParticipantsPage() {
               loading={importMutation.isPending}
               disabled={!csvText.trim()}
             >
-              Confirm &amp; Import Batch
+              {importMutation.isPending ? 'Importing Batch...' : 'Confirm & Import Batch'}
             </Button>
           </div>
         </div>
@@ -497,6 +522,18 @@ export default function ParticipantsPage() {
         title="Delete Candidate Record"
         message="Are you sure you want to remove this student? All attendance records, submissions, and contest attempts will be erased."
         confirmLabel="Delete Candidate"
+        danger
+      />
+
+      {/* Delete All Confirmation */}
+      <ConfirmDialog
+        open={showDeleteAllConfirm}
+        onClose={() => setShowDeleteAllConfirm(false)}
+        onConfirm={() => deleteAllMutation.mutate()}
+        loading={deleteAllMutation.isPending}
+        title="Delete All Candidates"
+        message="Are you sure you want to delete ALL candidates from the roster? This will erase all student accounts, registrations, and attendance records so you can re-import cleanly."
+        confirmLabel="Yes, Delete All"
         danger
       />
     </div>

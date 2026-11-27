@@ -116,6 +116,24 @@ export class ParticipantsService {
       errors: [],
     };
 
+    // Pre-calculate default student password hash ONCE for the entire batch
+    const defaultPlainPassword = env.DEFAULT_STUDENT_PASSWORD || 'Hackpro@2026';
+    const defaultHashedPassword = await hashPassword(defaultPlainPassword);
+
+    // Pre-fetch all existing users & participants into memory maps for O(1) instant checking
+    const allUsers = await userRepository.find({});
+    const allParticipants = await participantRepository.find({});
+
+    const existingUserMap = new Map();
+    for (const u of allUsers) {
+      if (u.email) existingUserMap.set(u.email.toLowerCase().trim(), u);
+    }
+
+    const existingParticipantMap = new Map();
+    for (const p of allParticipants) {
+      if (p.email) existingParticipantMap.set(p.email.toLowerCase().trim(), p);
+    }
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
@@ -136,13 +154,13 @@ export class ParticipantsService {
           row['e-mail'] ||
           Object.values(row).find((v) => typeof v === 'string' && v.includes('@')) ||
           ''
-        ).trim();
+        ).trim().toLowerCase();
 
         if (!email) {
-          throw new Error('Missing email address');
+          continue;
         }
 
-        const name = (
+        let name = (
           row.name ||
           row['Name'] ||
           row['NAME'] ||
@@ -155,7 +173,12 @@ export class ParticipantsService {
           ''
         ).trim();
 
-        const rollNumber = (
+        if (!name) {
+          const emailUserPart = email.split('@')[0].replace(/[._-]/g, ' ');
+          name = emailUserPart.charAt(0).toUpperCase() + emailUserPart.slice(1);
+        }
+
+        let rollUpper = (
           row.supersetId ||
           row.superset_id ||
           row['Superset ID'] ||
@@ -176,17 +199,64 @@ export class ParticipantsService {
           row['Roll No'] ||
           row.id ||
           ''
-        ).trim();
-        const department = (row.department || row['Department'] || 'General').trim();
-        const password = (row.password || row['Password'] || '').trim();
+        ).trim().toUpperCase();
 
-        await this.createParticipant({
-          email,
-          name,
-          rollNumber,
-          department,
-          password,
-        });
+        if (!rollUpper) {
+          rollUpper = ('EMP' + Math.floor(100000 + Math.random() * 900000)).toUpperCase();
+        }
+
+        const department = (row.department || row['Department'] || 'General').trim();
+        const customPassword = (row.password || row['Password'] || '').trim();
+
+        let hashedPassword = defaultHashedPassword;
+        if (customPassword && customPassword.length >= 6) {
+          hashedPassword = await hashPassword(customPassword);
+        }
+
+        // Check if user already exists
+        let user = existingUserMap.get(email);
+        if (!user) {
+          user = await userRepository.create({
+            name,
+            email,
+            rollNumber: rollUpper,
+            password: hashedPassword,
+            role: SYSTEM_ROLES.STUDENT,
+            roleId: SYSTEM_ROLES.STUDENT,
+            roleName: 'Student',
+            isActive: true,
+          });
+          existingUserMap.set(email, user);
+        } else {
+          if (rollUpper && user.rollNumber !== rollUpper) {
+            await userRepository.update(user.id, { rollNumber: rollUpper, name });
+            user.rollNumber = rollUpper;
+            user.name = name;
+          }
+        }
+
+        // Check if participant already exists
+        let participant = existingParticipantMap.get(email);
+        if (!participant) {
+          participant = await participantRepository.create({
+            id: user.id,
+            userId: user.id,
+            rollNumber: rollUpper,
+            name,
+            email,
+            department,
+            yearOrSemester: 'Final Year',
+            teamId: null,
+          });
+          existingParticipantMap.set(email, participant);
+        } else {
+          if (rollUpper && participant.rollNumber !== rollUpper) {
+            await participantRepository.update(participant.id, { rollNumber: rollUpper, name });
+            participant.rollNumber = rollUpper;
+            participant.name = name;
+          }
+        }
+
         results.imported++;
       } catch (err) {
         results.errors.push({ row: i + 2, error: err.message });
@@ -194,6 +264,24 @@ export class ParticipantsService {
     }
 
     return results;
+  }
+
+  async deleteAllParticipants() {
+    const allParticipants = await participantRepository.find({});
+    const participantIds = allParticipants.map((p) => String(p.id || p._id || p.userId));
+
+    for (const p of allParticipants) {
+      await participantRepository.delete(p.id || p._id);
+    }
+
+    for (const pId of participantIds) {
+      await userRepository.delete(pId);
+    }
+
+    return {
+      deletedCount: participantIds.length,
+      message: `Successfully deleted all ${participantIds.length} candidate records.`,
+    };
   }
 
   async updateParticipant(id, updates) {

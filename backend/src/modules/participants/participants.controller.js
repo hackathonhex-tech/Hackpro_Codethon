@@ -65,6 +65,11 @@ export class ParticipantsController {
     await participantsService.deleteParticipant(req.params.id);
     return successResponse(res, { message: 'Participant deleted successfully' });
   }
+
+  async deleteAll(req, res) {
+    const result = await participantsService.deleteAllParticipants();
+    return successResponse(res, result);
+  }
 }
 
 export const participantsController = new ParticipantsController();

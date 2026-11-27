@@ -52,6 +52,13 @@ router.patch(
 );
 
 router.delete(
+  '/all',
+  requirePermission(PERMISSIONS.PARTICIPANTS_DELETE),
+  logAudit('ALL_PARTICIPANTS_DELETED'),
+  asyncHandler((req, res) => participantsController.deleteAll(req, res))
+);
+
+router.delete(
   '/:id',
   requirePermission(PERMISSIONS.PARTICIPANTS_DELETE),
   logAudit('PARTICIPANT_DELETED', (req) => ({ participantId: req.params.id })),

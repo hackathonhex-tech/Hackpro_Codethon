@@ -62,7 +62,7 @@ export const participantsApi = {
     return res.data.data;
   },
   importCsv: async (csv: string) => {
-    const res = await apiClient.post('/participants/import', { csv });
+    const res = await apiClient.post('/participants/import', { csv }, { timeout: 180000 });
     return res.data.data;
   },
   exportCsv: async () => {
@@ -75,6 +75,10 @@ export const participantsApi = {
   },
   delete: async (id: string) => {
     await apiClient.delete(`/participants/${id}`);
+  },
+  deleteAll: async () => {
+    const res = await apiClient.delete('/participants/all');
+    return res.data.data;
   },
 };
 
