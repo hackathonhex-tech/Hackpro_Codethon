@@ -43,7 +43,7 @@ const envSchema = z.object({
   GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().min(10).default(300),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(5).default(30),
   EXECUTION_CONCURRENCY: z.coerce.number().int().min(1).max(64).optional(),
-  EXECUTION_MAX_QUEUE: z.coerce.number().int().min(10).default(500),
+  EXECUTION_MAX_QUEUE: z.coerce.number().int().min(10).default(2000),
 });
 
 const parsed = envSchema.safeParse(process.env);
