@@ -137,7 +137,7 @@ export class InvitationsService {
                           <span style="display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background-color: #3760F8; color: #FFFFFF; font-weight: 700; font-size: 11px;">1</span>
                         </td>
                         <td style="font-size: 13px; color: #334155; line-height: 1.5;">
-                          Open the official examination portal in your web browser.
+                          Open the official examination portal in your web browser: <a href="https://contest.hackpro.in/login" style="color: #3760F8; text-decoration: underline; font-weight: 600;" target="_blank">https://contest.hackpro.in/login</a>
                         </td>
                       </tr>
                     </table>

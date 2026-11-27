@@ -1023,7 +1023,7 @@ export default function AttemptPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100 font-sans select-none overflow-hidden text-slate-900">
+    <div className="h-screen h-[100dvh] max-h-[100dvh] min-h-[100dvh] flex flex-col bg-slate-100 font-sans select-none overflow-hidden text-slate-900">
       {/* ===================== STRICT FULLSCREEN GATE OVERLAY ===================== */}
       {needsFullscreenGate && (
         <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
@@ -1162,14 +1162,14 @@ export default function AttemptPage() {
       </div>
 
       {/* ===================== STRUCTURED SPLIT WORKSPACE ===================== */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         {/* LEFT PANEL: Question Statement & Specifications */}
         <div
           className={`flex-col bg-white border-r border-slate-200 min-h-0 overflow-hidden ${
             activeQuestion?.type === 'coding'
               ? isEditorMaximized
                 ? 'hidden'
-                : 'w-full md:w-[38%] lg:w-[34%] xl:w-[32%] shrink-0'
+                : 'w-full md:w-[38%] lg:w-[34%] xl:w-[32%] flex-1 md:flex-initial'
               : 'flex-1 md:w-1/2'
           } ${mobileTab === 'question' ? 'flex' : 'hidden md:flex'}`}
         >
@@ -1652,22 +1652,29 @@ export default function AttemptPage() {
 
               {/* Action Controls Bar */}
               <div className="px-3 sm:px-4 py-2 bg-[#131922] border-t border-slate-800 flex items-center justify-between gap-2 shrink-0">
-                {/* Left: Custom Input Checkbox */}
-                <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={showCustomInput}
-                    onChange={(e) => {
-                      setShowCustomInput(e.target.checked);
-                      if (e.target.checked) {
-                        setActiveConsoleTab('testcases');
-                        setIsConsoleCollapsed(false);
-                      }
-                    }}
-                    className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-[#3760F8] focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#3760F8]"
-                  />
-                  <span>Custom Input</span>
-                </label>
+                {/* Left: Slide Down / Slide Up Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsConsoleCollapsed((prev) => !prev)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-xs active:scale-95 ${
+                    isConsoleCollapsed
+                      ? 'bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border-blue-500/40'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
+                  }`}
+                  title={isConsoleCollapsed ? 'Slide up test cases and console' : 'Slide down test cases and console'}
+                >
+                  {isConsoleCollapsed ? (
+                    <>
+                      <ChevronUp className="w-3.5 h-3.5 text-blue-400 stroke-[2.5]" />
+                      <span>Slide Up</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 stroke-[2.5]" />
+                      <span>Slide Down</span>
+                    </>
+                  )}
+                </button>
 
                 {/* Right: Run Code & Submit Actions */}
                 <div className="flex items-center gap-2 shrink-0">
@@ -1865,6 +1872,42 @@ export default function AttemptPage() {
                   {/* TAB 1: TEST CASES & CUSTOM INPUT */}
                   {activeConsoleTab === 'testcases' && (
                     <div className="p-3.5 space-y-3 font-mono">
+                      {/* Case Selection & Custom Input Switcher Bar */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                        {((activeQuestion?.codingConfig?.sampleTestCases && activeQuestion.codingConfig.sampleTestCases.length > 0)
+                          ? activeQuestion.codingConfig.sampleTestCases
+                          : [{ input: '', expectedOutput: '' }]
+                        ).map((tc, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setShowCustomInput(false);
+                              setSelectedCaseIdx(idx);
+                            }}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              !showCustomInput && selectedCaseIdx === idx
+                                ? 'bg-[#3760F8] text-white shadow-xs'
+                                : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                            }`}
+                          >
+                            Case {idx}
+                          </button>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomInput(true)}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            showCustomInput
+                              ? 'bg-[#3760F8] text-white shadow-xs'
+                              : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                          }`}
+                        >
+                          <span>Custom Input</span>
+                        </button>
+                      </div>
+
                       {showCustomInput ? (
                         <div className="space-y-1.5">
                           <label className="text-[11px] font-sans font-bold text-slate-400 uppercase tracking-wider block">
@@ -1880,27 +1923,6 @@ export default function AttemptPage() {
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          {/* Sample Case Tabs */}
-                          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                            {((activeQuestion?.codingConfig?.sampleTestCases && activeQuestion.codingConfig.sampleTestCases.length > 0)
-                              ? activeQuestion.codingConfig.sampleTestCases
-                              : [{ input: '', expectedOutput: '' }]
-                            ).map((tc, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setSelectedCaseIdx(idx)}
-                                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                  selectedCaseIdx === idx
-                                    ? 'bg-[#3760F8] text-white shadow-xs'
-                                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-                                }`}
-                              >
-                                Case {idx}
-                              </button>
-                            ))}
-                          </div>
-
                           {/* Selected Case Preview */}
                           {activeQuestion?.codingConfig?.sampleTestCases && activeQuestion.codingConfig.sampleTestCases[selectedCaseIdx] && (
                             <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
@@ -2201,7 +2223,7 @@ export default function AttemptPage() {
       </div>
 
       {/* ===================== BOTTOM NAVIGATION ACTION BAR ===================== */}
-      <footer className="bg-white border-t border-slate-200 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3 shrink-0 shadow-lg z-20">
+      <footer className="sticky bottom-0 z-30 bg-white border-t border-slate-200 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3 shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
         {/* Left: Review & Clear Actions */}
         <div className="flex items-center gap-2">
           <button

@@ -607,7 +607,17 @@ function InvitationsContent() {
                     Participant Login Instructions:
                   </h5>
                   <ol className="text-xs text-slate-600 space-y-1.5 list-decimal pl-4 leading-relaxed">
-                    <li>The participant opens the examination portal in their web browser.</li>
+                    <li>
+                      The participant opens the examination portal in their web browser:{' '}
+                      <a
+                        href="https://contest.hackpro.in/login"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#3760F8] underline font-medium hover:text-blue-700 break-all"
+                      >
+                        https://contest.hackpro.in/login
+                      </a>
+                    </li>
                     <li>Enters their registered email ID.</li>
                     <li>Enters the assigned contest batch code.</li>
                     <li>The system verifies the email ID and batch code.</li>
