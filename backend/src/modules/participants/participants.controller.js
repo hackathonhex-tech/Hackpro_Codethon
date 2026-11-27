@@ -43,7 +43,14 @@ export class ParticipantsController {
 
   async exportCsv(req, res) {
     const all = await participantsService.getAllParticipants();
-    const csvData = toCsv(all, ['rollNumber', 'name', 'email', 'department']);
+    const formatted = all.map((p, idx) => ({
+      'S.No': idx + 1,
+      'Superset ID': p.rollNumber || '—',
+      'Candidate Name': p.name || 'Candidate',
+      'Email Address': p.email || '—',
+      'Team Association': p.teamName || 'Individual',
+    }));
+    const csvData = toCsv(formatted);
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="participants.csv"');
     return res.send(csvData);

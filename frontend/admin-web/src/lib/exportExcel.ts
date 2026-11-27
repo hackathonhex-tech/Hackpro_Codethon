@@ -92,7 +92,7 @@ export function exportAttendanceExcel({
       'Contest Title': contestTitle,
       'Batch Code': batchCode,
       'Attendance Status':
-        r.status === 'completed' ? 'Submitted' : r.status === 'present' ? 'Present' : 'Absent',
+        r.status === 'completed' || r.status === 'present' ? 'Present' : 'Absent',
       'Check-in Time': formatT(r.startedAt || r.testStartTimestamp),
       'Turn-in Time': formatT(r.submittedAt || r.submitTimestamp),
       'Duration (Minutes)': r.durationMinutes || 0,

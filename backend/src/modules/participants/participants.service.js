@@ -17,6 +17,14 @@ const sanitizeParticipant = (p) => {
 export class ParticipantsService {
   async getAllParticipants(options = {}) {
     let list = await participantRepository.find({});
+    const allTeams = await teamRepository.find({});
+    list = list.map((p) => {
+      const team = p.teamId ? allTeams.find((t) => String(t.id) === String(p.teamId)) : null;
+      return {
+        ...p,
+        teamName: team ? team.name : (p.teamName || null),
+      };
+    });
     if (options.search) {
       const q = options.search.toLowerCase();
       list = list.filter(
@@ -51,8 +59,8 @@ export class ParticipantsService {
       name = emailUserPart.charAt(0).toUpperCase() + emailUserPart.slice(1);
     }
 
-    // Auto-generate or derive rollNumber (Employee ID) if not provided
-    let rollUpper = (data.rollNumber || data.employeeId || '').trim().toUpperCase();
+    // Auto-generate or derive rollNumber (Superset ID) if not provided
+    let rollUpper = (data.rollNumber || data.supersetId || data.employeeId || '').trim().toUpperCase();
     if (!rollUpper) {
       rollUpper = ('EMP' + Math.floor(100000 + Math.random() * 900000)).toUpperCase();
     }
@@ -117,6 +125,14 @@ export class ParticipantsService {
           row['EMAIL'] ||
           row['Email Address'] ||
           row['emailAddress'] ||
+          row['Email ID'] ||
+          row['email id'] ||
+          row['Mail ID'] ||
+          row['mail id'] ||
+          row['MailId'] ||
+          row['mailId'] ||
+          row['Mail'] ||
+          row['mail'] ||
           row['e-mail'] ||
           Object.values(row).find((v) => typeof v === 'string' && v.includes('@')) ||
           ''
@@ -126,8 +142,29 @@ export class ParticipantsService {
           throw new Error('Missing email address');
         }
 
-        const name = (row.name || row['Name'] || row.fullName || row['Full Name'] || '').trim();
+        const name = (
+          row.name ||
+          row['Name'] ||
+          row['NAME'] ||
+          row['Candidate Name'] ||
+          row['candidateName'] ||
+          row['Student Name'] ||
+          row['studentName'] ||
+          row.fullName ||
+          row['Full Name'] ||
+          ''
+        ).trim();
+
         const rollNumber = (
+          row.supersetId ||
+          row.superset_id ||
+          row['Superset ID'] ||
+          row['Superset Id'] ||
+          row['superset id'] ||
+          row['SUPERSET ID'] ||
+          row['Super Set ID'] ||
+          row['super set id'] ||
+          row['Super Set Id'] ||
           row.employeeId ||
           row['Employee ID'] ||
           row['EmployeeId'] ||

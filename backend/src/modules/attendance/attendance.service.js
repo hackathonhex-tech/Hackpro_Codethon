@@ -184,10 +184,8 @@ export class AttendanceService {
       };
 
       const resolvedStatus =
-        r.status === 'completed'
-          ? 'Submitted'
-          : r.status === 'present'
-          ? 'Present / In-Progress'
+        r.status === 'completed' || r.status === 'present'
+          ? 'Present'
           : 'Absent';
 
       return {

@@ -110,9 +110,7 @@ export function exportAttendancePdf({
       '—';
     const team = r.teamName || 'Individual';
     const statusLabel =
-      r.status === 'completed'
-        ? 'Submitted'
-        : r.status === 'present'
+      r.status === 'completed' || r.status === 'present'
         ? 'Present'
         : 'Absent';
 
@@ -190,12 +188,10 @@ export function exportAttendancePdf({
       // Highlight Status column
       if (data.section === 'body' && data.column.index === 5) {
         const val = String(data.cell.raw);
-        if (val === 'Submitted') {
-          doc.setTextColor(55, 96, 248);
-        } else if (val === 'Present') {
+        if (val === 'Present') {
           doc.setTextColor(16, 185, 129);
         } else {
-          doc.setTextColor(148, 163, 184);
+          doc.setTextColor(239, 68, 68);
         }
       }
     },

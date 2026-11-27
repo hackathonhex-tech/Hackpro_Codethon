@@ -132,7 +132,7 @@ export default function ParticipantsPage() {
   };
 
   const downloadSampleTemplate = () => {
-    const templateContent = 'email,name,employeeId,department\nemployee1@company.com,John Doe,EMP2026101,Engineering\nemployee2@company.com,,,\nemployee3@company.com,,,';
+    const templateContent = 'Name,Mail ID,Superset ID\nJohn Doe,john.doe@example.com,SUP2026101\nJane Smith,jane.smith@example.com,SUP2026102\n';
     const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -200,7 +200,7 @@ export default function ParticipantsPage() {
   const columns = [
     {
       key: 'rollNumber',
-      header: 'Employee ID',
+      header: 'Superset ID',
       render: (p: Participant) => (
         <span className="font-mono font-bold text-xs text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
           {p.rollNumber}
@@ -212,21 +212,18 @@ export default function ParticipantsPage() {
       header: 'Candidate Name',
       render: (p: Participant) => (
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-[#3760F8]/10 text-[#3760F8] flex items-center justify-center text-xs font-bold">
-            {p.name.charAt(0)}
+          <div className="w-6 h-6 rounded-full bg-[#3760F8]/10 text-[#3760F8] flex items-center justify-center text-xs font-bold shrink-0">
+            {p.name ? p.name.charAt(0).toUpperCase() : 'C'}
           </div>
-          <div>
-            <span className="font-semibold text-slate-900 tracking-tight text-xs block">{p.name}</span>
-            <span className="text-[11px] text-slate-400">{p.email}</span>
-          </div>
+          <span className="font-semibold text-slate-900 tracking-tight text-xs">{p.name}</span>
         </div>
       ),
     },
     {
-      key: 'department',
-      header: 'Department',
+      key: 'email',
+      header: 'Email Address',
       render: (p: Participant) => (
-        <span className="text-xs text-slate-600 font-medium">{p.department || 'General'}</span>
+        <span className="text-xs text-slate-600 font-mono font-medium">{p.email || '—'}</span>
       ),
     },
     {
@@ -284,7 +281,7 @@ export default function ParticipantsPage() {
 
       <div className="max-w-md">
         <Input
-          placeholder="Filter by Employee ID, name, or department..."
+          placeholder="Filter by Superset ID, name, or email..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -335,22 +332,16 @@ export default function ParticipantsPage() {
             helperText="Only email ID is mandatory. Student attends test by entering their email and the contest batch code."
           />
           <Input
-            label="Full Name (Optional)"
+            label="Candidate Name (Optional)"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="e.g. John Doe (auto-derived from email if empty)"
           />
           <Input
-            label="Employee ID (Optional)"
+            label="Superset ID (Optional)"
             value={form.rollNumber}
             onChange={(e) => setForm((f) => ({ ...f, rollNumber: e.target.value }))}
-            placeholder="e.g. EMP2026001 (auto-generated if empty)"
-          />
-          <Input
-            label="Department (Optional)"
-            value={form.department}
-            onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
-            placeholder="e.g. Computer Science (default: General)"
+            placeholder="e.g. SUP2026001 (auto-generated if empty)"
           />
           <Input
             label="Default Password (Optional)"
@@ -443,19 +434,23 @@ export default function ParticipantsPage() {
                 <table className="min-w-full divide-y divide-slate-100 text-[11px]">
                   <thead>
                     <tr className="bg-slate-50 text-slate-500 font-semibold">
-                      <th className="px-2.5 py-1.5 text-left">Employee ID</th>
-                      <th className="px-2.5 py-1.5 text-left">Name</th>
-                      <th className="px-2.5 py-1.5 text-left">Email</th>
-                      <th className="px-2.5 py-1.5 text-left">Department</th>
+                      <th className="px-2.5 py-1.5 text-left">Superset ID</th>
+                      <th className="px-2.5 py-1.5 text-left">Candidate Name</th>
+                      <th className="px-2.5 py-1.5 text-left">Mail ID</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {parsedPreview.map((row, i) => (
                       <tr key={i} className="hover:bg-slate-50/50">
-                        <td className="px-2.5 py-1 font-mono font-bold text-slate-700">{row.employeeId || row['Employee ID'] || row.empId || row.rollNumber || row['Roll Number'] || row['Roll No'] || '—'}</td>
-                        <td className="px-2.5 py-1 font-semibold text-slate-900">{row.name || row['Name'] || row['Employee Name'] || row['Student Name'] || '—'}</td>
-                        <td className="px-2.5 py-1 text-slate-600">{row.email || row['Email'] || '—'}</td>
-                        <td className="px-2.5 py-1 text-slate-500">{row.department || row['Department'] || '—'}</td>
+                        <td className="px-2.5 py-1 font-mono font-bold text-slate-700">
+                          {row.supersetId || row['Superset ID'] || row['super set id'] || row['Super Set ID'] || row['superset id'] || row.employeeId || row['Employee ID'] || row.empId || row.rollNumber || row['Roll Number'] || row['Roll No'] || '—'}
+                        </td>
+                        <td className="px-2.5 py-1 font-semibold text-slate-900">
+                          {row.name || row['Name'] || row['Candidate Name'] || row['candidateName'] || row['Student Name'] || row['Full Name'] || '—'}
+                        </td>
+                        <td className="px-2.5 py-1 text-slate-600 font-mono">
+                          {row.email || row['Email'] || row['Mail ID'] || row['mail id'] || row['MailId'] || row['Mail'] || row['mail'] || '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -473,7 +468,7 @@ export default function ParticipantsPage() {
               className="mt-2 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono focus:ring-1 focus:ring-[#3760F8] focus:outline-none h-32 bg-slate-50/50"
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
-              placeholder="employeeId,name,email,department,password"
+              placeholder="Name,Mail ID,Superset ID"
             />
           </details>
 
