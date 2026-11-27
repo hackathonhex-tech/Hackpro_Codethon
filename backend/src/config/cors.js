@@ -7,7 +7,12 @@ export const corsOptions = {
     if (!origin) return callback(null, true);
     
     const allowed = env.CORS_ORIGINS.split(',').map((o) => o.trim());
-    if (allowed.includes(origin) || allowed.includes('*')) {
+    if (
+      allowed.includes(origin) ||
+      allowed.includes('*') ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('vercel.app')
+    ) {
       return callback(null, true);
     }
     // Allow localhost with any port in development
