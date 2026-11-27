@@ -34,6 +34,7 @@ import {
   PowerOff,
   Calendar,
   Mail,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface Section {
@@ -170,6 +171,10 @@ export default function ContestDetailPage() {
     maxCodeSubmissions: 3,
     randomizeQuestions: false,
     questionsPerParticipant: 2,
+    enableMcq: false,
+    expectedMcqCount: 0,
+    expectedCodingCount: 2,
+    questionAllocationMethod: 'round_robin',
   });
 
   const openEditContest = () => {
@@ -199,6 +204,10 @@ export default function ContestDetailPage() {
       maxCodeSubmissions: contest.maxCodeSubmissions ?? 3,
       randomizeQuestions: Boolean(contest.randomizeQuestions),
       questionsPerParticipant: contest.questionsPerParticipant || 2,
+      enableMcq: Boolean(contest.enableMcq),
+      expectedMcqCount: contest.expectedMcqCount ?? 0,
+      expectedCodingCount: contest.expectedCodingCount ?? 2,
+      questionAllocationMethod: contest.questionAllocationMethod || 'round_robin',
     });
     setShowEditModal(true);
   };
@@ -258,6 +267,10 @@ export default function ContestDetailPage() {
         maxCodeSubmissions: Number(editForm.maxCodeSubmissions) ?? 3,
         randomizeQuestions: editForm.randomizeQuestions,
         questionsPerParticipant: Number(editForm.questionsPerParticipant) || 2,
+        enableMcq: editForm.enableMcq,
+        expectedMcqCount: Number(editForm.expectedMcqCount) || 0,
+        expectedCodingCount: Number(editForm.expectedCodingCount) || 2,
+        questionAllocationMethod: editForm.questionAllocationMethod || 'round_robin',
       });
     },
     onSuccess: () => {
@@ -667,29 +680,59 @@ export default function ContestDetailPage() {
         ) : (
           <div className="space-y-5">
             {/* Contest Questions & Total Marks Banner */}
-            <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white p-5 rounded-2xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                  <FileQuestion className="w-4 h-4 text-[#3760F8]" />
-                  <span>Question-Wise Marks Allocation</span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Assign marks per question. The total contest score is automatically calculated from the sum of question marks.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="bg-white px-3.5 py-2 rounded-xl border border-blue-200 shadow-2xs text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Questions</div>
-                  <div className="text-base font-extrabold text-slate-800 font-mono">{questions.length}</div>
-                </div>
-                <div className="bg-white px-4 py-2 rounded-xl border border-[#3760F8]/30 shadow-2xs text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#3760F8]">Total Contest Marks</div>
-                  <div className="text-base font-extrabold text-[#3760F8] font-mono">
-                    {questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0)} Marks
+            {(() => {
+              const codingCount = questions.filter((q) => q.type === 'coding').length;
+              const mcqCount = questions.filter((q) => q.type === 'mcq').length;
+              const expectedCoding = contest?.expectedCodingCount || codingCount || 2;
+              const expectedMcq = contest?.expectedMcqCount || mcqCount || 0;
+              const perUser = contest?.questionsPerParticipant || 2;
+              const isMcqEnabled = Boolean(contest?.enableMcq);
+
+              return (
+                <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white p-5 rounded-2xl border border-blue-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                      <FileQuestion className="w-4 h-4 text-[#3760F8]" />
+                      <span>Contest Question Bank &amp; Participant Allocation</span>
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Add as many coding challenges as required to build your question bank. Each participant automatically receives {perUser} challenges via balanced Round Robin.
+                    </p>
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      <span className="text-[11px] font-bold text-blue-700 bg-blue-100/70 border border-blue-200 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                        <Code2 className="w-3.5 h-3.5" />
+                        Coding Pool: {codingCount} / {expectedCoding} configured
+                      </span>
+                      {isMcqEnabled ? (
+                        <span className="text-[11px] font-bold text-purple-700 bg-purple-100/70 border border-purple-200 px-2.5 py-0.5 rounded-full">
+                          MCQ Pool: {mcqCount} / {expectedMcq} configured
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">
+                          MCQs Disabled (Coding Only)
+                        </span>
+                      )}
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Round Robin: {perUser} challenges/student (600+ candidates)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="bg-white px-3.5 py-2 rounded-xl border border-blue-200 shadow-2xs text-center">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total in Bank</div>
+                      <div className="text-base font-extrabold text-slate-800 font-mono">{questions.length}</div>
+                    </div>
+                    <div className="bg-white px-4 py-2 rounded-xl border border-[#3760F8]/30 shadow-2xs text-center">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#3760F8]">Total Marks</div>
+                      <div className="text-base font-extrabold text-[#3760F8] font-mono">
+                        {questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0)} Marks
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
           {sections.map((section) => {
             const sectionQuestions = questions.filter((q) => q.sectionId === section._id);
@@ -707,14 +750,16 @@ export default function ContestDetailPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openAddQ(section._id, 'mcq')}
-                      leftIcon={<Plus className="w-3 h-3 text-[#3760F8]" />}
-                    >
-                      Add MCQ
-                    </Button>
+                    {contest?.enableMcq && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openAddQ(section._id, 'mcq')}
+                        leftIcon={<Plus className="w-3 h-3 text-[#3760F8]" />}
+                      >
+                        Add MCQ
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -1710,44 +1755,112 @@ export default function ContestDetailPage() {
             </div>
           </div>
 
-          {/* Dynamic Question Randomization */}
-          <div className="border border-slate-200 rounded-2xl p-4 space-y-3 bg-slate-50/50">
-            <div className="flex items-center gap-2.5">
-              <input
-                type="checkbox"
-                id="editRandomizeQuestions"
-                className="w-4 h-4 text-[#3760F8] accent-[#3760F8] rounded cursor-pointer"
-                checked={editForm.randomizeQuestions}
-                onChange={(e) => setEditForm((f) => ({ ...f, randomizeQuestions: e.target.checked }))}
-              />
-              <label htmlFor="editRandomizeQuestions" className="text-xs font-bold text-slate-800 cursor-pointer">
-                Enable Dynamic Question Randomization
-              </label>
+          {/* Question Pool & Large-Scale Allocation Settings */}
+          <div className="border border-slate-200 rounded-2xl p-4 space-y-3.5 bg-slate-50/70">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Code2 className="w-4 h-4 text-[#3760F8]" />
+                  <span>Question Pool &amp; Participant Allocation</span>
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Configure question bank sizes and automatic Round Robin distribution for large batches (up to 600+ candidates).
+                </p>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-[#3760F8] border border-blue-200">
+                Exam Ready
+              </span>
             </div>
-            <p className="text-[11px] text-slate-500 ml-6">
-              When enabled, each candidate receives a randomly selected subset of questions from the question bank. Their assigned questions remain persistent throughout the assessment session.
-            </p>
 
-            {editForm.randomizeQuestions && (
-              <div className="ml-6 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
                 <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                  Questions to Assign per Participant *
+                  Number of Coding Questions in Pool *
                 </label>
                 <Input
                   type="number"
                   min="1"
-                  max="100"
-                  value={String(editForm.questionsPerParticipant || 2)}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, questionsPerParticipant: Math.max(1, Number(e.target.value)) }))
-                  }
+                  max="50"
+                  value={String(editForm.expectedCodingCount ?? 2)}
+                  onChange={(e) => setEditForm((f) => ({ ...f, expectedCodingCount: Math.max(1, Number(e.target.value)) }))}
+                  placeholder="e.g. 10"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Total coding challenges you plan to add in the contest question bank.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Coding Questions per Candidate *
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  max={editForm.expectedCodingCount || 10}
+                  value={String(editForm.questionsPerParticipant ?? 2)}
+                  onChange={(e) => setEditForm((f) => ({ ...f, questionsPerParticipant: Math.max(1, Number(e.target.value)) }))}
                   placeholder="2"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Example: If the contest bank has 40 questions and this is set to 2, each participant will receive 2 randomly assigned challenges.
+                  Each employee receives exactly this many coding questions via balanced Round Robin.
                 </p>
               </div>
-            )}
+            </div>
+
+            {/* MCQ Option Toggle */}
+            <div className="pt-2 border-t border-slate-200/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="edit_enableMcq"
+                    className="w-4 h-4 text-[#3760F8] accent-[#3760F8] rounded cursor-pointer"
+                    checked={editForm.enableMcq}
+                    onChange={(e) => setEditForm((f) => ({ ...f, enableMcq: e.target.checked }))}
+                  />
+                  <span className="text-xs font-bold text-slate-800">
+                    Include Multiple Choice Questions (MCQs)
+                  </span>
+                </label>
+                <Badge color={editForm.enableMcq ? 'blue' : 'gray'}>
+                  {editForm.enableMcq ? 'MCQs Enabled' : 'Coding Only (No MCQs)'}
+                </Badge>
+              </div>
+
+              {editForm.enableMcq ? (
+                <div className="pl-6 space-y-2">
+                  <div className="max-w-xs">
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Number of MCQ Questions
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={String(editForm.expectedMcqCount ?? 5)}
+                      onChange={(e) => setEditForm((f) => ({ ...f, expectedMcqCount: Math.max(1, Number(e.target.value)) }))}
+                      placeholder="e.g. 5"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    MCQs will be included alongside the coding challenges.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500 pl-6">
+                  MCQs are completely disabled. Candidates will only receive coding problems and the admin interface will hide the MCQ creation option.
+                </p>
+              )}
+            </div>
+
+            {/* Allocation Info Pill */}
+            <div className="p-2.5 bg-blue-50/70 border border-blue-200/60 rounded-xl flex items-center gap-2 text-xs text-blue-900">
+              <CheckCircle2 className="w-4 h-4 text-[#3760F8] shrink-0" />
+              <span className="text-[11px]">
+                <strong>Round Robin Allocation:</strong> Participants will receive balanced combinations of {editForm.questionsPerParticipant ?? 2} questions from the pool of {editForm.expectedCodingCount ?? 2} questions, distributing 600+ candidates evenly.
+              </span>
+            </div>
           </div>
 
           <div className="flex gap-2.5 justify-end pt-3 border-t border-slate-100">

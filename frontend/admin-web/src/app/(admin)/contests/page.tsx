@@ -28,6 +28,9 @@ import {
   Power,
   PowerOff,
   Calendar,
+  Code2,
+  CheckCircle2,
+  HelpCircle,
 } from 'lucide-react';
 
 interface Contest {
@@ -43,6 +46,11 @@ interface Contest {
   rubricId?: string;
   description?: string;
   instructions?: string;
+  enableMcq?: boolean;
+  expectedMcqCount?: number;
+  expectedCodingCount?: number;
+  questionsPerParticipant?: number;
+  questionAllocationMethod?: 'round_robin' | 'all';
   proctorConfig?: {
     enabled?: boolean;
     detectTabSwitch?: boolean;
@@ -95,6 +103,11 @@ const getDefaultForm = () => {
     rubricId: '',
     description: '',
     instructions: '',
+    enableMcq: false,
+    expectedMcqCount: 0,
+    expectedCodingCount: 2,
+    questionsPerParticipant: 2,
+    questionAllocationMethod: 'round_robin',
     proctorEnabled: true,
     detectTabSwitch: true,
     blockCopyPaste: true,
@@ -279,6 +292,114 @@ function ContestFormInputs({
         value={form.instructions}
         onChange={(e) => setForm((f) => ({ ...f, instructions: e.target.value }))}
       />
+
+      {/* Question Pool & Large-Scale Allocation Settings */}
+      <div className="border border-slate-200 rounded-2xl p-4 space-y-3.5 bg-slate-50/70">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Code2 className="w-4 h-4 text-[#3760F8]" />
+              <span>Question Pool &amp; Participant Allocation</span>
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Configure question bank sizes and automatic Round Robin distribution for large batches (up to 600+ candidates).
+            </p>
+          </div>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-[#3760F8] border border-blue-200">
+            Exam Ready
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+              Number of Coding Questions in Pool *
+            </label>
+            <Input
+              type="number"
+              min="1"
+              max="50"
+              value={String(form.expectedCodingCount ?? 2)}
+              onChange={(e) => setForm((f) => ({ ...f, expectedCodingCount: Math.max(1, Number(e.target.value)) }))}
+              placeholder="e.g. 10"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Total coding challenges you plan to add in the contest question bank.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+              Coding Questions per Candidate *
+            </label>
+            <Input
+              type="number"
+              min="1"
+              max={form.expectedCodingCount || 10}
+              value={String(form.questionsPerParticipant ?? 2)}
+              onChange={(e) => setForm((f) => ({ ...f, questionsPerParticipant: Math.max(1, Number(e.target.value)) }))}
+              placeholder="2"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Each employee receives exactly this many coding questions via balanced Round Robin.
+            </p>
+          </div>
+        </div>
+
+        {/* MCQ Option Toggle */}
+        <div className="pt-2 border-t border-slate-200/80 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                id={`${idPrefix}_enableMcq`}
+                className="w-4 h-4 text-[#3760F8] accent-[#3760F8] rounded cursor-pointer"
+                checked={form.enableMcq}
+                onChange={(e) => setForm((f) => ({ ...f, enableMcq: e.target.checked }))}
+              />
+              <span className="text-xs font-bold text-slate-800">
+                Include Multiple Choice Questions (MCQs)
+              </span>
+            </label>
+            <Badge color={form.enableMcq ? 'blue' : 'gray'}>
+              {form.enableMcq ? 'MCQs Enabled' : 'Coding Only (No MCQs)'}
+            </Badge>
+          </div>
+
+          {form.enableMcq ? (
+            <div className="pl-6 space-y-2">
+              <div className="max-w-xs">
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Number of MCQ Questions
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={String(form.expectedMcqCount ?? 5)}
+                  onChange={(e) => setForm((f) => ({ ...f, expectedMcqCount: Math.max(1, Number(e.target.value)) }))}
+                  placeholder="e.g. 5"
+                />
+              </div>
+              <p className="text-[10px] text-slate-500">
+                MCQs will be included alongside the coding challenges.
+              </p>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-500 pl-6">
+              MCQs are completely disabled. Candidates will only receive coding problems and the admin interface will hide the MCQ creation option.
+            </p>
+          )}
+        </div>
+
+        {/* Allocation Info Pill */}
+        <div className="p-2.5 bg-blue-50/70 border border-blue-200/60 rounded-xl flex items-center gap-2 text-xs text-blue-900">
+          <CheckCircle2 className="w-4 h-4 text-[#3760F8] shrink-0" />
+          <span className="text-[11px]">
+            <strong>Round Robin Allocation:</strong> Participants will receive balanced combinations of {form.questionsPerParticipant ?? 2} questions from the pool of {form.expectedCodingCount ?? 2} questions, distributing 600+ candidates evenly.
+          </span>
+        </div>
+      </div>
 
       {/* Security Proctoring Section */}
       <div className="border border-slate-200 rounded-2xl p-4 space-y-3 bg-slate-50/50">
@@ -513,6 +634,11 @@ export default function ContestsPage() {
         showTotalPointsEarned: form.showTotalPointsEarned,
         codeRunCooldownSeconds: Number(form.codeRunCooldownSeconds) ?? 30,
         maxCodeSubmissions: Number(form.maxCodeSubmissions) ?? 3,
+        enableMcq: form.enableMcq,
+        expectedMcqCount: Number(form.expectedMcqCount) || 0,
+        expectedCodingCount: Number(form.expectedCodingCount) || 2,
+        questionsPerParticipant: Number(form.questionsPerParticipant) || 2,
+        questionAllocationMethod: form.questionAllocationMethod || 'round_robin',
       });
     },
     onSuccess: (newContest: any) => {
@@ -571,6 +697,11 @@ export default function ContestsPage() {
         showTotalPointsEarned: form.showTotalPointsEarned,
         codeRunCooldownSeconds: Number(form.codeRunCooldownSeconds) ?? 30,
         maxCodeSubmissions: Number(form.maxCodeSubmissions) ?? 3,
+        enableMcq: form.enableMcq,
+        expectedMcqCount: Number(form.expectedMcqCount) || 0,
+        expectedCodingCount: Number(form.expectedCodingCount) || 2,
+        questionsPerParticipant: Number(form.questionsPerParticipant) || 2,
+        questionAllocationMethod: form.questionAllocationMethod || 'round_robin',
       });
     },
     onSuccess: () => {
@@ -646,6 +777,11 @@ export default function ContestsPage() {
       showTotalPointsEarned: c.showTotalPointsEarned ?? true,
       codeRunCooldownSeconds: c.codeRunCooldownSeconds ?? 30,
       maxCodeSubmissions: c.maxCodeSubmissions ?? 3,
+      enableMcq: Boolean(c.enableMcq),
+      expectedMcqCount: c.expectedMcqCount ?? 0,
+      expectedCodingCount: c.expectedCodingCount ?? 2,
+      questionsPerParticipant: c.questionsPerParticipant ?? 2,
+      questionAllocationMethod: c.questionAllocationMethod || 'round_robin',
     });
   };
 
@@ -666,6 +802,14 @@ export default function ContestsPage() {
             {c.batchCode && (
               <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-[#EEF2FF] text-[#3760F8] border border-[#C7D2FE]">
                 Batch: {c.batchCode}
+              </span>
+            )}
+            <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+              Pool: {c.expectedCodingCount || 2} Coding • {c.questionsPerParticipant || 2}/user (Round Robin)
+            </span>
+            {c.enableMcq && (
+              <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">
+                +{c.expectedMcqCount || 0} MCQ
               </span>
             )}
           </div>

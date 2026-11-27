@@ -70,6 +70,10 @@ export declare const createContestSchema: z.ZodObject<{
     shuffleOptions: z.ZodDefault<z.ZodBoolean>;
     randomizeQuestions: z.ZodDefault<z.ZodBoolean>;
     questionsPerParticipant: z.ZodOptional<z.ZodNumber>;
+    questionDistributionMode: z.ZodDefault<z.ZodEnum<["all", "round_robin", "random"]>>;
+    codingQuestionsCount: z.ZodDefault<z.ZodNumber>;
+    enableMcq: z.ZodDefault<z.ZodBoolean>;
+    mcqQuestionsCount: z.ZodDefault<z.ZodNumber>;
     resultVisibility: z.ZodDefault<z.ZodEnum<["immediate", "after_contest", "hidden"]>>;
     codeRunCooldownSeconds: z.ZodDefault<z.ZodNumber>;
     maxCodeSubmissions: z.ZodDefault<z.ZodNumber>;
@@ -142,6 +146,10 @@ export declare const createContestSchema: z.ZodObject<{
     shuffleQuestions: boolean;
     shuffleOptions: boolean;
     randomizeQuestions: boolean;
+    questionDistributionMode: "all" | "round_robin" | "random";
+    codingQuestionsCount: number;
+    enableMcq: boolean;
+    mcqQuestionsCount: number;
     resultVisibility: "immediate" | "after_contest" | "hidden";
     codeRunCooldownSeconds: number;
     maxCodeSubmissions: number;
@@ -184,6 +192,10 @@ export declare const createContestSchema: z.ZodObject<{
     shuffleOptions?: boolean | undefined;
     randomizeQuestions?: boolean | undefined;
     questionsPerParticipant?: number | undefined;
+    questionDistributionMode?: "all" | "round_robin" | "random" | undefined;
+    codingQuestionsCount?: number | undefined;
+    enableMcq?: boolean | undefined;
+    mcqQuestionsCount?: number | undefined;
     resultVisibility?: "immediate" | "after_contest" | "hidden" | undefined;
     codeRunCooldownSeconds?: number | undefined;
     maxCodeSubmissions?: number | undefined;
@@ -225,6 +237,10 @@ export declare const updateContestSchema: z.ZodObject<{
     shuffleOptions: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     randomizeQuestions: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     questionsPerParticipant: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
+    questionDistributionMode: z.ZodOptional<z.ZodDefault<z.ZodEnum<["all", "round_robin", "random"]>>>;
+    codingQuestionsCount: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    enableMcq: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    mcqQuestionsCount: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     resultVisibility: z.ZodOptional<z.ZodDefault<z.ZodEnum<["immediate", "after_contest", "hidden"]>>>;
     codeRunCooldownSeconds: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     maxCodeSubmissions: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
@@ -299,6 +315,10 @@ export declare const updateContestSchema: z.ZodObject<{
     shuffleOptions?: boolean | undefined;
     randomizeQuestions?: boolean | undefined;
     questionsPerParticipant?: number | undefined;
+    questionDistributionMode?: "all" | "round_robin" | "random" | undefined;
+    codingQuestionsCount?: number | undefined;
+    enableMcq?: boolean | undefined;
+    mcqQuestionsCount?: number | undefined;
     resultVisibility?: "immediate" | "after_contest" | "hidden" | undefined;
     codeRunCooldownSeconds?: number | undefined;
     maxCodeSubmissions?: number | undefined;
@@ -339,6 +359,10 @@ export declare const updateContestSchema: z.ZodObject<{
     shuffleOptions?: boolean | undefined;
     randomizeQuestions?: boolean | undefined;
     questionsPerParticipant?: number | undefined;
+    questionDistributionMode?: "all" | "round_robin" | "random" | undefined;
+    codingQuestionsCount?: number | undefined;
+    enableMcq?: boolean | undefined;
+    mcqQuestionsCount?: number | undefined;
     resultVisibility?: "immediate" | "after_contest" | "hidden" | undefined;
     codeRunCooldownSeconds?: number | undefined;
     maxCodeSubmissions?: number | undefined;

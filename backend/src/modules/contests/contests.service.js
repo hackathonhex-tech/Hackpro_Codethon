@@ -70,6 +70,12 @@ export class ContestsService {
   async createContest(data) {
     const contest = await contestRepository.create({
       ...data,
+      enableMcq: data.enableMcq === true,
+      expectedMcqCount: Number(data.expectedMcqCount) || 0,
+      expectedCodingCount: Number(data.expectedCodingCount) || 2,
+      questionsPerParticipant: Number(data.questionsPerParticipant) || 2,
+      questionAllocationMethod: data.questionAllocationMethod || 'round_robin',
+      randomizeQuestions: data.randomizeQuestions ?? true,
       extensionSeconds: 0,
       createdAt: new Date().toISOString(),
     });
@@ -80,7 +86,14 @@ export class ContestsService {
     const contest = await contestRepository.findById(id);
     if (!contest) throw ApiError.notFound('Contest not found');
 
-    const updated = await contestRepository.update(id, updates);
+    const cleanUpdates = { ...updates };
+    if ('enableMcq' in updates) cleanUpdates.enableMcq = updates.enableMcq === true;
+    if ('expectedMcqCount' in updates) cleanUpdates.expectedMcqCount = Number(updates.expectedMcqCount) || 0;
+    if ('expectedCodingCount' in updates) cleanUpdates.expectedCodingCount = Number(updates.expectedCodingCount) || 2;
+    if ('questionsPerParticipant' in updates) cleanUpdates.questionsPerParticipant = Number(updates.questionsPerParticipant) || 2;
+    if ('questionAllocationMethod' in updates) cleanUpdates.questionAllocationMethod = updates.questionAllocationMethod || 'round_robin';
+
+    const updated = await contestRepository.update(id, cleanUpdates);
 
     // Notify connected participants of updated settings/timing
     const io = getSocketServer();

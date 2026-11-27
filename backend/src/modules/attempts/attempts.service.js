@@ -177,10 +177,26 @@ export class AttemptsService {
       });
     }
 
-    const questions = await questionRepository.findByContest(contestId);
-    const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 0), 0);
+    let questions = await questionRepository.findByContest(contestId);
+    if (contest.enableMcq === false) {
+      questions = questions.filter((q) => q.type !== 'mcq');
+    }
 
     const attempt = await attemptRepository.findByContestAndUser(contestId, user.userId);
+
+    let totalMarks = 0;
+    if (attempt?.assignedQuestionIds && attempt.assignedQuestionIds.length > 0) {
+      const assignedSet = new Set(attempt.assignedQuestionIds.map(String));
+      const myQuestions = questions.filter((q) => assignedSet.has(String(q.id)) || assignedSet.has(String(q._id)));
+      totalMarks = myQuestions.reduce((sum, q) => sum + (q.marks || 0), 0);
+    } else {
+      const codingQ = questions.filter((q) => q.type === 'coding');
+      const mcqQ = contest.enableMcq === false ? [] : questions.filter((q) => q.type === 'mcq');
+      const limitCoding = Math.min(contest.questionsPerParticipant || 2, codingQ.length);
+      const codingMarks = codingQ.slice(0, limitCoding).reduce((sum, q) => sum + (q.marks || 50), 0);
+      const mcqMarks = mcqQ.reduce((sum, q) => sum + (q.marks || 10), 0);
+      totalMarks = codingMarks + mcqMarks;
+    }
 
     const canShowScore =
       contest.showTotalPointsEarned !== false &&
@@ -243,6 +259,94 @@ export class AttemptsService {
           }
         : null,
     };
+  }
+
+  async allocateParticipantQuestions(contest, user, preloadedQuestions = null) {
+    const contestId = contest.id || contest._id;
+    const allQuestions = preloadedQuestions || (await questionRepository.findByContest(contestId));
+    const isMcqEnabled = contest.enableMcq === true;
+
+    // Filter available coding challenges
+    const codingQuestions = allQuestions.filter(
+      (q) => q.type === 'coding' && q.includeInRandomPool !== false
+    );
+    // Sort deterministically by order, then creation date / id so all candidates see the exact same ordering
+    codingQuestions.sort((a, b) => {
+      const orderDiff = (a.order ?? 0) - (b.order ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+      return String(a.createdAt || a.id || a._id).localeCompare(String(b.createdAt || b.id || b._id));
+    });
+
+    const codingPoolSize = codingQuestions.length;
+    const questionsPerParticipant = Math.max(1, contest.questionsPerParticipant || 2);
+    const limitCoding = Math.min(questionsPerParticipant, codingPoolSize);
+
+    let selectedCodingIds = [];
+
+    if (codingPoolSize <= limitCoding || codingPoolSize === 0) {
+      selectedCodingIds = codingQuestions.map((q) => q.id || q._id);
+    } else {
+      // Find candidate's deterministic index among contest assignments or attempts
+      let candidateIndex = -1;
+      try {
+        const assignments = await assignmentRepository.findByContest(contestId);
+        const sorted = (assignments || []).slice().sort((a, b) =>
+          String(a.participantId || a.id).localeCompare(String(b.participantId || b.id))
+        );
+        candidateIndex = sorted.findIndex((a) => a.participantId === user.userId);
+      } catch (e) {
+        candidateIndex = -1;
+      }
+
+      if (candidateIndex < 0) {
+        try {
+          const attempts = await attemptRepository.findByContest(contestId);
+          const userAttemptIndex = (attempts || []).findIndex((att) => att.userId === user.userId);
+          candidateIndex = userAttemptIndex >= 0 ? userAttemptIndex : (attempts?.length || 0);
+        } catch (e) {
+          candidateIndex = 0;
+        }
+      }
+
+      // Mathematical Round Robin with dynamic stride offset across epochs
+      // Distributes all 600+ candidates with equal frequency across questions
+      const i = Math.max(0, candidateIndex);
+      const M = codingPoolSize;
+      const K = limitCoding;
+      const r = Math.floor(i / M);
+      const p = i % M;
+      const stride = 1 + (r % Math.max(1, M - 1));
+
+      const chosenIndices = new Set();
+      for (let step = 0; step < K; step++) {
+        let idx = (p + step * stride) % M;
+        while (chosenIndices.has(idx) && chosenIndices.size < M) {
+          idx = (idx + 1) % M;
+        }
+        chosenIndices.add(idx);
+        selectedCodingIds.push(codingQuestions[idx].id || codingQuestions[idx]._id);
+      }
+    }
+
+    // MCQ Questions allocation: strictly exclude if MCQ is disabled
+    let selectedMcqIds = [];
+    if (isMcqEnabled) {
+      const mcqQuestions = allQuestions.filter((q) => q.type === 'mcq');
+      mcqQuestions.sort((a, b) => {
+        const orderDiff = (a.order ?? 0) - (b.order ?? 0);
+        if (orderDiff !== 0) return orderDiff;
+        return String(a.createdAt || a.id || a._id).localeCompare(String(b.createdAt || b.id || b._id));
+      });
+
+      const expectedMcq = Number(contest.expectedMcqCount) || 0;
+      if (expectedMcq > 0 && expectedMcq < mcqQuestions.length) {
+        selectedMcqIds = mcqQuestions.slice(0, expectedMcq).map((q) => q.id || q._id);
+      } else {
+        selectedMcqIds = mcqQuestions.map((q) => q.id || q._id);
+      }
+    }
+
+    return [...selectedCodingIds, ...selectedMcqIds];
   }
 
   async startAttempt(contestId, user) {
@@ -317,12 +421,17 @@ export class AttemptsService {
     );
 
     let assignedQuestionIds = undefined;
-    if (contest.randomizeQuestions) {
-      const allQ = await questionRepository.findByContest(contestId);
-      const pool = allQ.filter((q) => q.includeInRandomPool !== false);
-      const limitCount = Math.min(contest.questionsPerParticipant || 2, pool.length);
-      const shuffled = [...pool].sort(() => 0.5 - Math.random());
-      assignedQuestionIds = shuffled.slice(0, limitCount).map((q) => q.id || q._id);
+    const allQ = await questionRepository.findByContest(contestId);
+    const codingCount = allQ.filter((q) => q.type === 'coding').length;
+    const questionsPerParticipant = contest.questionsPerParticipant || 2;
+    // Always assign questions if pool has more questions than limit, or if round robin / randomize is configured, or MCQ is disabled
+    if (
+      contest.questionAllocationMethod === 'round_robin' ||
+      contest.randomizeQuestions ||
+      codingCount > questionsPerParticipant ||
+      contest.enableMcq === false
+    ) {
+      assignedQuestionIds = await this.allocateParticipantQuestions(contest, user, allQ);
     }
 
     attempt = await attemptRepository.create({
@@ -395,19 +504,26 @@ export class AttemptsService {
       attempt.status = ATTEMPT_STATUS.SUBMITTED;
     }
 
-    // Fetch questions sanitized for student (adhering to randomized question pool if enabled)
+    // Fetch questions sanitized for student (strictly adhering to assigned questions & MCQ setting)
     let questions = await questionRepository.findByContest(contestId);
-    if (contest.randomizeQuestions) {
-      if (!attempt.assignedQuestionIds || !attempt.assignedQuestionIds.length) {
-        const pool = questions.filter((q) => q.includeInRandomPool !== false);
-        const limitCount = Math.min(contest.questionsPerParticipant || 2, pool.length);
-        const shuffled = [...pool].sort(() => 0.5 - Math.random());
-        attempt.assignedQuestionIds = shuffled.slice(0, limitCount).map((q) => q.id || q._id);
-        await attemptRepository.update(attempt.id, { assignedQuestionIds: attempt.assignedQuestionIds });
-      }
-      const assignedSet = new Set(attempt.assignedQuestionIds.map(String));
-      questions = questions.filter((q) => assignedSet.has(String(q.id)) || assignedSet.has(String(q._id)));
-    } else if (attempt.assignedQuestionIds && attempt.assignedQuestionIds.length > 0) {
+    if (contest.enableMcq === false) {
+      questions = questions.filter((q) => q.type !== 'mcq');
+    }
+
+    const codingCount = questions.filter((q) => q.type === 'coding').length;
+    const questionsPerParticipant = contest.questionsPerParticipant || 2;
+    const shouldAllocate =
+      contest.questionAllocationMethod === 'round_robin' ||
+      contest.randomizeQuestions ||
+      codingCount > questionsPerParticipant ||
+      contest.enableMcq === false;
+
+    if ((!attempt.assignedQuestionIds || !attempt.assignedQuestionIds.length) && shouldAllocate) {
+      attempt.assignedQuestionIds = await this.allocateParticipantQuestions(contest, user, questions);
+      await attemptRepository.update(attempt.id, { assignedQuestionIds: attempt.assignedQuestionIds });
+    }
+
+    if (attempt.assignedQuestionIds && attempt.assignedQuestionIds.length > 0) {
       const assignedSet = new Set(attempt.assignedQuestionIds.map(String));
       questions = questions.filter((q) => assignedSet.has(String(q.id)) || assignedSet.has(String(q._id)));
     }
@@ -580,6 +696,12 @@ export class AttemptsService {
     if (attempt.status === ATTEMPT_STATUS.SUBMITTED) {
       throw ApiError.attemptLocked();
     }
+    if (attempt.assignedQuestionIds && attempt.assignedQuestionIds.length > 0) {
+      const isAssigned = attempt.assignedQuestionIds.some((id) => String(id) === String(questionId));
+      if (!isAssigned) {
+        throw ApiError.badRequest('This challenge is not assigned to your examination session.', 'QUESTION_NOT_ASSIGNED');
+      }
+    }
 
     const saved = await answerRepository.upsertAnswer(attempt.id, questionId, {
       selectedOptions: selectedOptions || [],
@@ -600,6 +722,12 @@ export class AttemptsService {
     const cooldownSeconds = contest.codeRunCooldownSeconds ?? 30;
 
     const attempt = await attemptRepository.findByContestAndUser(contestId, user.userId);
+    if (attempt && attempt.assignedQuestionIds && attempt.assignedQuestionIds.length > 0) {
+      const isAssigned = attempt.assignedQuestionIds.some((id) => String(id) === String(questionId));
+      if (!isAssigned) {
+        throw ApiError.badRequest('This challenge is not assigned to your examination session.', 'QUESTION_NOT_ASSIGNED');
+      }
+    }
     if (attempt && cooldownSeconds > 0) {
       const lastRunTimestamps = attempt.lastRunTimestamps || {};
       const lastRun = lastRunTimestamps[questionId] || 0;
@@ -707,6 +835,12 @@ export class AttemptsService {
     if (!attempt) throw ApiError.notFound('Attempt not found');
     if (attempt.status === ATTEMPT_STATUS.SUBMITTED) {
       throw ApiError.attemptLocked();
+    }
+    if (attempt.assignedQuestionIds && attempt.assignedQuestionIds.length > 0) {
+      const isAssigned = attempt.assignedQuestionIds.some((id) => String(id) === String(questionId));
+      if (!isAssigned) {
+        throw ApiError.badRequest('This challenge is not assigned to your examination session.', 'QUESTION_NOT_ASSIGNED');
+      }
     }
 
     const maxSubmissions = contest?.maxCodeSubmissions ?? 5;
@@ -856,7 +990,14 @@ export class AttemptsService {
     }
 
     const contest = await contestRepository.findById(contestId);
-    const questions = await questionRepository.findByContest(contestId);
+    let questions = await questionRepository.findByContest(contestId);
+    if (contest?.enableMcq === false) {
+      questions = questions.filter((q) => q.type !== 'mcq');
+    }
+    if (attempt.assignedQuestionIds && attempt.assignedQuestionIds.length > 0) {
+      const assignedSet = new Set(attempt.assignedQuestionIds.map(String));
+      questions = questions.filter((q) => assignedSet.has(String(q.id)) || assignedSet.has(String(q._id)));
+    }
     const answers = await answerRepository.findByAttempt(attempt.id);
     const rubric = contest?.rubricId ? await rubricRepository.findById(contest.rubricId) : null;
 
