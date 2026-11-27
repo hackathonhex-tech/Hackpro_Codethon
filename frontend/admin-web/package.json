@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
+    "prebuild": "npm --prefix ../.. --workspace=@codeathon/shared run build || true",
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "tsc --noEmit"

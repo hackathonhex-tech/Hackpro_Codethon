@@ -3,6 +3,8 @@ node_modules
 .env.local
 .env.*.local
 dist
+!packages/shared/dist
+!packages/shared/dist/**
 build
 .next
 coverage
