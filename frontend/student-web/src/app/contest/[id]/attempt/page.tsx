@@ -40,6 +40,7 @@ import {
   X,
   Menu,
   Smartphone,
+  WrapText,
 } from 'lucide-react';
 
 interface McqOption {
@@ -129,6 +130,7 @@ interface AnswerState {
   selectedOptions?: string[];
   code?: string;
   language?: string;
+  codesByLanguage?: Record<string, string>;
 }
 
 interface RunCaseResult {
@@ -247,6 +249,8 @@ export default function AttemptPage() {
   const [editorFontSize, setEditorFontSize] = useState<'sm' | 'base' | 'lg'>('sm');
   const [isConsoleCollapsed, setIsConsoleCollapsed] = useState(false);
   const [isConsoleExpanded, setIsConsoleExpanded] = useState(false);
+  const [isWordWrap, setIsWordWrap] = useState(true);
+  const drawerTouchStartY = useRef<number | null>(null);
 
   // Auto-collapse console drawer on mobile devices so editor has maximum vertical space to scroll
   useEffect(() => {
@@ -740,10 +744,20 @@ export default function AttemptPage() {
     if (!qId) return;
     const lang = currentAnswer?.language || 'python';
     const starter = activeQuestion?.codingConfig?.starterCode?.[lang] || DEFAULT_STARTER_CODE[lang] || '';
-    setAnswers((prev) => ({
-      ...prev,
-      [qId]: { ...prev[qId], code: starter },
-    }));
+    setAnswers((prev) => {
+      const existing = prev[qId];
+      return {
+        ...prev,
+        [qId]: {
+          ...existing,
+          code: starter,
+          codesByLanguage: {
+            ...(existing?.codesByLanguage || {}),
+            [lang]: starter,
+          },
+        },
+      };
+    });
   };
 
   // Navigation & Save Helpers
@@ -1501,6 +1515,21 @@ export default function AttemptPage() {
                     </button>
                   </div>
 
+                  {/* Word Wrap Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsWordWrap((prev) => !prev)}
+                    title={isWordWrap ? 'Word Wrap is ON (Code fits inside screen)' : 'Word Wrap is OFF (Horizontal scroll)'}
+                    className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors cursor-pointer ${
+                      isWordWrap
+                        ? 'bg-[#3760F8]/20 text-blue-300 border-blue-500/40 font-semibold'
+                        : 'text-slate-400 hover:text-white border-transparent hover:border-slate-700 hover:bg-slate-800'
+                    }`}
+                  >
+                    <WrapText className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{isWordWrap ? 'Wrap On' : 'Wrap Off'}</span>
+                  </button>
+
                   {/* Reset Starter Code */}
                   <button
                     type="button"
@@ -1534,16 +1563,42 @@ export default function AttemptPage() {
                               key={l.key}
                               type="button"
                               onClick={() => {
+                                const currentLang = currentAnswer?.language || 'python';
+                                const newLang = l.key;
+                                if (currentLang === newLang) {
+                                  setIsLangOpen(false);
+                                  return;
+                                }
+
                                 const currentCode = currentAnswer?.code;
-                                const isDefaultCode = !currentCode || Object.values(DEFAULT_STARTER_CODE).some((tpl) => tpl.trim() === currentCode.trim());
-                                setAnswers((prev) => ({
-                                  ...prev,
-                                  [qId]: {
-                                    ...prev[qId],
-                                    language: l.key,
-                                    ...(isDefaultCode ? { code: activeQuestion?.codingConfig?.starterCode?.[l.key] || DEFAULT_STARTER_CODE[l.key] || '' } : {}),
-                                  },
-                                }));
+                                const existingCodes: Record<string, string> = {
+                                  ...(currentAnswer?.codesByLanguage || {}),
+                                  ...(currentCode ? { [currentLang]: currentCode } : {}),
+                                };
+
+                                // Load cached code for newLang or load clean starter code for newLang
+                                const codeForNewLang =
+                                  existingCodes[newLang] !== undefined
+                                    ? existingCodes[newLang]
+                                    : activeQuestion?.codingConfig?.starterCode?.[newLang] ||
+                                      DEFAULT_STARTER_CODE[newLang] ||
+                                      '';
+
+                                setAnswers((prev) => {
+                                  const existing = prev[qId];
+                                  return {
+                                    ...prev,
+                                    [qId]: {
+                                      ...existing,
+                                      language: newLang,
+                                      code: codeForNewLang,
+                                      codesByLanguage: {
+                                        ...existingCodes,
+                                        [newLang]: codeForNewLang,
+                                      },
+                                    },
+                                  };
+                                });
                                 setIsLangOpen(false);
                               }}
                               className={`w-full text-left px-3 py-1.5 text-xs font-semibold flex items-center justify-between cursor-pointer ${
@@ -1574,18 +1629,24 @@ export default function AttemptPage() {
                 onChange={(code) => {
                   setAnswers((prev) => {
                     const existing = prev[qId];
+                    const currentLang = existing?.language || currentAnswer?.language || 'python';
                     return {
                       ...prev,
                       [qId]: {
                         ...existing,
-                        language: existing?.language || currentAnswer?.language || 'python',
+                        language: currentLang,
                         code,
+                        codesByLanguage: {
+                          ...(existing?.codesByLanguage || {}),
+                          [currentLang]: code,
+                        },
                       },
                     };
                   });
                 }}
                 language={currentAnswer?.language || 'python'}
                 fontSize={editorFontSize}
+                isWordWrap={isWordWrap}
                 placeholder="# Write your program code here..."
               />
 
@@ -1676,18 +1737,47 @@ export default function AttemptPage() {
               {/* ===================== HACKERRANK CONSOLE DRAWER ===================== */}
               <div className={`flex flex-col bg-[#090D16] border-t border-slate-800 text-xs transition-all duration-300 ease-in-out overflow-hidden ${
                 isConsoleCollapsed
-                  ? 'h-10'
+                  ? 'h-11 cursor-pointer'
                   : isConsoleExpanded
                   ? 'h-[440px] sm:h-[480px]'
                   : 'h-64 sm:h-72'
               }`}>
-                {/* Console Navigation Header Bar */}
-                <div className="bg-[#121721] px-3 sm:px-4 h-10 border-b border-slate-800 flex items-center justify-between shrink-0 select-none">
+                {/* Drag Handle & Console Navigation Header Bar */}
+                <div
+                  onClick={() => {
+                    if (isConsoleCollapsed) {
+                      setIsConsoleCollapsed(false);
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    drawerTouchStartY.current = e.touches[0].clientY;
+                  }}
+                  onTouchMove={(e) => {
+                    if (drawerTouchStartY.current === null) return;
+                    const deltaY = e.touches[0].clientY - drawerTouchStartY.current;
+                    // If user drags/swipes down by > 35px while drawer is open, push it down
+                    if (deltaY > 35 && !isConsoleCollapsed) {
+                      setIsConsoleCollapsed(true);
+                      drawerTouchStartY.current = null;
+                    }
+                  }}
+                  onTouchEnd={() => {
+                    drawerTouchStartY.current = null;
+                  }}
+                  className={`bg-[#121721] px-3 sm:px-4 h-11 border-b border-slate-800 flex items-center justify-between shrink-0 select-none relative ${
+                    isConsoleCollapsed ? 'cursor-pointer hover:bg-[#181f2c]' : ''
+                  }`}
+                  title={isConsoleCollapsed ? 'Tap to slide up test cases' : 'Swipe down to slide down test cases'}
+                >
+                  {/* Subtle Top Center Drag Handle Pill */}
+                  <div className="absolute top-1 left-1/2 -translate-x-1/2 w-9 h-1 bg-slate-600/60 rounded-full pointer-events-none" />
+
                   {/* Left: Console Tabs */}
-                  <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 pt-0.5">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setActiveConsoleTab('testcases');
                         setIsConsoleCollapsed(false);
                       }}
@@ -1703,7 +1793,8 @@ export default function AttemptPage() {
 
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setActiveConsoleTab('result');
                         setIsConsoleCollapsed(false);
                       }}
@@ -1726,11 +1817,14 @@ export default function AttemptPage() {
                   </div>
 
                   {/* Right: Drawer Size & Slide Down / Up Controls */}
-                  <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 pt-0.5">
                     {!isConsoleCollapsed && (
                       <button
                         type="button"
-                        onClick={() => setIsConsoleExpanded((prev) => !prev)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsConsoleExpanded((prev) => !prev);
+                        }}
                         className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                         title={isConsoleExpanded ? 'Switch to compact console height' : 'Expand console height'}
                       >
@@ -1745,7 +1839,10 @@ export default function AttemptPage() {
                     {/* Dedicated Slide Down / Slide Up Toggle */}
                     <button
                       type="button"
-                      onClick={() => setIsConsoleCollapsed((prev) => !prev)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsConsoleCollapsed((prev) => !prev);
+                      }}
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 ${
                         isConsoleCollapsed
                           ? 'bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 hover:text-white border border-blue-500/40'

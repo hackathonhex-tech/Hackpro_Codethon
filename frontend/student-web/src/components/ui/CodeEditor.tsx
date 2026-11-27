@@ -10,6 +10,7 @@ export interface CodeEditorProps {
   placeholder?: string;
   className?: string;
   minLines?: number;
+  isWordWrap?: boolean;
 }
 
 function escapeHtml(str: string): string {
@@ -172,6 +173,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   placeholder = '// Write your code here...',
   className = '',
   minLines = 15,
+  isWordWrap = true,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -420,14 +422,13 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   return (
     <div
-      onClick={() => textareaRef.current?.focus()}
-      className={`flex-1 flex min-h-0 overflow-hidden bg-[#0D1117] relative dark-scrollbar overscroll-contain touch-pan-x touch-pan-y ${className}`}
+      className={`flex-1 flex min-h-0 overflow-hidden bg-[#0D1117] relative dark-scrollbar overscroll-contain ${className}`}
     >
       {/* Line Numbers Gutter */}
       <div
         ref={gutterRef}
         aria-hidden="true"
-        className="w-11 sm:w-12 bg-[#090D16] border-r border-slate-800 text-slate-500 font-mono select-none py-3.5 text-right pr-2.5 overflow-hidden shrink-0 space-y-0 pointer-events-none sm:pointer-events-auto"
+        className="w-10 sm:w-12 bg-[#090D16] border-r border-slate-800 text-slate-500 font-mono select-none py-3.5 text-right pr-2 overflow-hidden shrink-0 space-y-0 pointer-events-none sm:pointer-events-auto"
         style={{
           fontSize: fontSizePx,
           lineHeight: lineHeightPx,
@@ -451,17 +452,17 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       </div>
 
       {/* Editor Content Area: Syntax Highlight Layer + Interactive Transparent Textarea */}
-      <div
-        onClick={() => textareaRef.current?.focus()}
-        className="relative flex-1 h-full min-h-0 overflow-hidden cursor-text overscroll-contain touch-pan-x touch-pan-y"
-      >
+      <div className="relative flex-1 h-full min-h-0 overflow-hidden cursor-text overscroll-contain">
         {/* Syntax Highlighted Render (Underneath) */}
         <pre
           ref={preRef}
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 select-none m-0 font-mono overflow-hidden whitespace-pre leading-6"
+          className={`pointer-events-none absolute inset-0 select-none m-0 font-mono leading-6 ${
+            isWordWrap ? 'whitespace-pre-wrap break-words overflow-hidden' : 'whitespace-pre overflow-hidden'
+          }`}
           style={{
             padding: '14px',
+            paddingRight: isWordWrap ? '14px' : '64px',
             fontSize: fontSizePx,
             lineHeight: lineHeightPx,
             fontFamily: monoFontFamily,
@@ -493,6 +494,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           autoCorrect="off"
           style={{
             padding: '14px',
+            paddingRight: isWordWrap ? '14px' : '64px',
             fontSize: fontSizePx,
             lineHeight: lineHeightPx,
             fontFamily: monoFontFamily,
@@ -504,11 +506,14 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             caretColor: '#58A6FF',
             tabSize: 4,
             colorScheme: 'dark',
-            touchAction: 'pan-x pan-y',
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
           }}
-          className="absolute inset-0 w-full h-full font-mono bg-transparent resize-none outline-none border-none overflow-auto whitespace-pre leading-6 select-text selection:bg-[#3760F8]/40 focus:ring-0 focus:outline-none dark-scrollbar overscroll-contain touch-pan-x touch-pan-y"
+          className={`absolute inset-0 w-full h-full font-mono bg-transparent resize-none outline-none border-none leading-6 select-text selection:bg-[#3760F8]/40 focus:ring-0 focus:outline-none dark-scrollbar overscroll-contain ${
+            isWordWrap
+              ? 'whitespace-pre-wrap break-words overflow-y-auto overflow-x-hidden'
+              : 'whitespace-pre overflow-auto'
+          }`}
         />
       </div>
     </div>
