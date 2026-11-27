@@ -8,7 +8,7 @@ import { loginSchema, type LoginInput } from '@codeathon/shared';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigation } from '@/components/ui/NavigationLoader';
-import { Eye, EyeOff, Loader2, User, Lock, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, User, Lock, AlertCircle, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -77,23 +77,36 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-sans relative">
-      <div className="w-full max-w-[420px] bg-white rounded-2xl border border-slate-200/90 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-8 sm:p-10 space-y-7 relative z-10">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0B1120] via-[#0F172A] to-[#0A0E1A] p-4 sm:p-6 font-sans relative overflow-hidden">
+      {/* Dynamic Ambient Background Glows */}
+      <div className="absolute -top-32 -left-32 w-80 sm:w-96 h-80 sm:h-96 bg-[#3760F8]/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-80 sm:w-96 h-80 sm:h-96 bg-[#60A5FA]/15 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-[440px] bg-white/95 backdrop-blur-xl rounded-3xl border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.25)] p-6 sm:p-9 space-y-6 relative z-10 transition-all">
         
-        {/* Brand Logo & Header */}
+        {/* Brand Badge & Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <img src="/logo.png" alt="HACKPRO" className="h-10 w-auto object-contain" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100/80 text-[#3760F8] text-[11px] font-bold tracking-wide uppercase shadow-2xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#3760F8]" />
+            <span>Official Candidate Portal</span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="HACKPRO" className="h-10 w-auto object-contain" />
+            <span className="text-xl font-extrabold tracking-tight text-slate-900">HACKPRO</span>
+          </div>
+
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Candidate Login</h1>
-            <p className="text-xs text-slate-500 font-medium">
-              Enter your registered email / Employee ID and batch code to attend your test
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">Candidate Login</h1>
+            <p className="text-xs text-slate-500 font-medium max-w-xs mx-auto leading-relaxed">
+              Enter your registered email / Employee ID and batch access key to begin your test.
             </p>
           </div>
         </div>
 
         {/* Error Alert */}
         {serverError && (
-          <div className="flex items-center gap-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+          <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium animate-in fade-in duration-200">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
             <span>{serverError}</span>
           </div>
@@ -117,7 +130,7 @@ export default function LoginPage() {
                 autoFocus
                 placeholder="employee@company.com or EMP2026001"
                 {...register('identifier')}
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3760F8]/20 transition-all ${
+                className={`w-full pl-10 pr-4 h-11 sm:h-12 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3760F8]/20 transition-all ${
                   errors.identifier ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200 bg-white focus:border-[#3760F8]'
                 }`}
               />
@@ -142,7 +155,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 placeholder="e.g. BATCH2026"
                 {...register('password')}
-                className={`w-full pl-10 pr-11 py-2.5 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3760F8]/20 transition-all ${
+                className={`w-full pl-10 pr-11 h-11 sm:h-12 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3760F8]/20 transition-all ${
                   errors.password ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200 bg-white focus:border-[#3760F8]'
                 }`}
               />
@@ -164,7 +177,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[#3760F8] hover:bg-[#284fd9] text-white text-sm font-semibold shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+            className="w-full mt-2 h-11 sm:h-12 px-4 rounded-xl bg-gradient-to-r from-[#3760F8] to-[#254EDB] hover:from-[#2B54E8] hover:to-[#1E43CA] text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed active:scale-[0.99]"
           >
             {isLoading ? (
               <>
@@ -172,10 +185,24 @@ export default function LoginPage() {
                 <span>Entering Test Arena...</span>
               </>
             ) : (
-              <span>Attend Test</span>
+              <>
+                <span>Attend Test</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
             )}
           </button>
         </form>
+
+        {/* Security & Support Footer */}
+        <div className="pt-2 border-t border-slate-100 flex flex-col items-center text-center space-y-1.5">
+          <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+            <Lock className="w-3 h-3 text-slate-400" />
+            <span>256-bit Secure Assessment • AI Proctoring Monitored</span>
+          </p>
+          <p className="text-[11px] text-slate-400">
+            Need assistance? Contact your test administrator or coordinator.
+          </p>
+        </div>
       </div>
     </main>
   );

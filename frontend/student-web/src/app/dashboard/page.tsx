@@ -258,13 +258,10 @@ export default function DashboardPage() {
       <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="HACKPRO" className="h-10 w-auto object-contain rounded" />
+            <img src="/logo.png" alt="HACKPRO" className="h-9 sm:h-10 w-auto object-contain rounded" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-slate-900 tracking-tight text-base sm:text-lg">HACKPRO</span>
-                <span className="text-[10px] font-bold text-[#3760F8] bg-[#EEF2FF] border border-[#C7D2FE] px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Assessment Portal
-                </span>
               </div>
               <p className="text-[11px] text-slate-400 font-medium hidden sm:block">Candidate Assessment System</p>
             </div>
@@ -361,11 +358,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Minimalistic 2-Column Split: Available Assessments (Left) & Candidate Profile (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
           {/* Main Column (8 cols): Available Assessments */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="lg:col-span-8 space-y-5 sm:space-y-6">
+            <div className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5">
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                     <span>Available Assessments</span>
@@ -378,36 +375,36 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <form onSubmit={handleJoinBatch} className="flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      aria-label="Contest batch code"
-                      placeholder="Enter Batch Code"
-                      value={batchCodeInput}
-                      onChange={(e) => setBatchCodeInput(e.target.value)}
-                      className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 uppercase font-mono placeholder:normal-case placeholder:font-sans placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3760F8]/30 focus:border-[#3760F8] transition-all w-36 sm:w-40"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isJoining || !batchCodeInput.trim()}
-                      className="px-3 py-2 rounded-xl bg-[#3760F8] hover:bg-[#284fd9] text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition-all cursor-pointer whitespace-nowrap"
-                    >
-                      {isJoining ? '...' : 'Join'}
-                    </button>
-                  </form>
-
-                  <div className="relative w-full sm:w-56">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                  <div className="relative w-full sm:w-52 md:w-56">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
                       aria-label="Search assessments"
                       placeholder="Search assessments..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3760F8]/30 focus:border-[#3760F8] transition-all"
+                      className="w-full pl-9 pr-3.5 py-2 sm:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3760F8]/30 focus:border-[#3760F8] transition-all"
                     />
                   </div>
+
+                  <form onSubmit={handleJoinBatch} className="flex items-center gap-1.5 w-full sm:w-auto">
+                    <input
+                      type="text"
+                      aria-label="Contest batch code"
+                      placeholder="Enter Batch Code"
+                      value={batchCodeInput}
+                      onChange={(e) => setBatchCodeInput(e.target.value)}
+                      className="flex-1 sm:w-36 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 uppercase font-mono placeholder:normal-case placeholder:font-sans placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#3760F8]/30 focus:border-[#3760F8] transition-all"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isJoining || !batchCodeInput.trim()}
+                      className="px-3.5 py-2 rounded-xl bg-[#3760F8] hover:bg-[#284fd9] text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                    >
+                      {isJoining ? '...' : 'Join'}
+                    </button>
+                  </form>
                 </div>
               </div>
 
@@ -423,12 +420,13 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 border-t border-slate-100 pt-4 overflow-x-auto">
+              {/* Category Pills (No horizontal bar, no scrollbar artifact) */}
+              <div className="flex items-center gap-1.5 sm:gap-2 pt-1 overflow-x-auto scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'all'
-                      ? 'bg-[#3760F8] text-white shadow-xs'
+                      ? 'bg-[#3760F8] text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
@@ -436,9 +434,9 @@ export default function DashboardPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('live')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'live'
-                      ? 'bg-[#3760F8] text-white shadow-xs'
+                      ? 'bg-[#3760F8] text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
@@ -446,9 +444,9 @@ export default function DashboardPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('upcoming')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'upcoming'
-                      ? 'bg-[#3760F8] text-white shadow-xs'
+                      ? 'bg-[#3760F8] text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
@@ -456,9 +454,9 @@ export default function DashboardPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('completed')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     activeTab === 'completed'
-                      ? 'bg-[#3760F8] text-white shadow-xs'
+                      ? 'bg-[#3760F8] text-white shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
@@ -538,14 +536,14 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        <div className="self-end sm:self-center shrink-0">
+                        <div className="w-full sm:w-auto self-stretch sm:self-center shrink-0 pt-2 sm:pt-0">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleEnterContest(contest);
                             }}
                             disabled={isOff || (!isLive && !isSubmitted) || navigatingContestId === contest.id}
-                            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed ${
+                            className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed ${
                               isSubmitted
                                 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                                 : isLive || isInProgress

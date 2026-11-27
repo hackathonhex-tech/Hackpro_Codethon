@@ -247,6 +247,13 @@ export default function AttemptPage() {
   const [editorFontSize, setEditorFontSize] = useState<'sm' | 'base' | 'lg'>('sm');
   const [isConsoleCollapsed, setIsConsoleCollapsed] = useState(false);
   const [isConsoleExpanded, setIsConsoleExpanded] = useState(false);
+
+  // Auto-collapse console drawer on mobile devices so editor has maximum vertical space to scroll
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsConsoleCollapsed(true);
+    }
+  }, []);
   const [isEditorMaximized, setIsEditorMaximized] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({});
@@ -1136,7 +1143,7 @@ export default function AttemptPage() {
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* LEFT PANEL: Question Statement & Specifications */}
         <div
-          className={`flex-col bg-white border-r border-slate-200 overflow-hidden ${
+          className={`flex-col bg-white border-r border-slate-200 min-h-0 overflow-hidden ${
             activeQuestion?.type === 'coding'
               ? isEditorMaximized
                 ? 'hidden'
@@ -1343,7 +1350,7 @@ export default function AttemptPage() {
 
         {/* RIGHT PANEL: Answer Area (MCQ Radios or Coding IDE) */}
         <div
-          className={`flex-col overflow-hidden ${
+          className={`flex-col min-h-0 overflow-hidden ${
             activeQuestion?.type === 'coding'
               ? isEditorMaximized
                 ? 'w-full flex-1 bg-[#0D1117]'
@@ -1353,7 +1360,7 @@ export default function AttemptPage() {
         >
           {activeQuestion?.type === 'mcq' ? (
             /* ================== MCQ OPTION SELECTOR ================== */
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Select Answer:
@@ -1421,7 +1428,7 @@ export default function AttemptPage() {
             </div>
           ) : (
             /* ================== CODING IDE & TEST RUNNER ================== */
-            <div className="w-full h-full flex-1 flex flex-col overflow-hidden bg-[#0D1117]">
+            <div className="w-full h-full flex-1 flex flex-col min-h-0 overflow-hidden bg-[#0D1117]">
               {/* Language Toolbar & Workspace Controls */}
               <div className="bg-[#161B22] px-4 py-2 border-b border-slate-800 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
