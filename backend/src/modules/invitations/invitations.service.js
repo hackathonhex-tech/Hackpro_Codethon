@@ -105,18 +105,18 @@ export class InvitationsService {
                 </tr>
               </table>
 
-              <!-- Unique Contest Batch Code Highlight Box -->
+              <!-- Assessment Access Key Notice -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #EEF2FF; border: 2px dashed #6366F1; border-radius: 14px; margin-bottom: 28px;">
                 <tr>
                   <td align="center" style="padding: 22px 20px;">
-                    <span style="font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px; color: #4338CA; display: block; margin-bottom: 6px;">
-                      YOUR OFFICIAL CONTEST BATCH CODE
+                    <span style="font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px; color: #4338CA; display: block; margin-bottom: 8px;">
+                      ASSESSMENT ACCESS KEY
                     </span>
-                    <span style="font-size: 28px; font-weight: 900; letter-spacing: 3px; color: #3760F8; font-family: ui-monospace, Menlo, Monaco, Consolas, monospace; display: block; margin-bottom: 6px;">
-                      ${cleanBatch}
+                    <span style="font-size: 18px; font-weight: 800; color: #1E293B; display: block; margin-bottom: 6px;">
+                      Your Access Key will be provided at the event.
                     </span>
                     <span style="font-size: 12px; color: #6366F1; font-weight: 500;">
-                      (Keep this code ready — required during candidate sign-in)
+                      (You will enter this key along with your registered email to begin)
                     </span>
                   </td>
                 </tr>
@@ -161,7 +161,7 @@ export class InvitationsService {
                           <span style="display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background-color: #3760F8; color: #FFFFFF; font-weight: 700; font-size: 11px;">3</span>
                         </td>
                         <td style="font-size: 13px; color: #334155; line-height: 1.5;">
-                          Enter your assigned contest batch code: <strong style="color: #3760F8; font-family: monospace; letter-spacing: 1px;">${cleanBatch}</strong>
+                          Enter the Access Key provided to you at the event.
                         </td>
                       </tr>
                     </table>
@@ -220,7 +220,7 @@ export class InvitationsService {
               </p>
               <p style="font-size: 11px; color: #94A3B8; margin: 0; line-height: 1.4;">
                 This automated invitation was sent to <strong style="color: #64748B;">${email}</strong>.<br />
-                Do not share your unique batch code or access credentials with unauthorized persons.
+                Do not share your access credentials with unauthorized persons.
               </p>
             </td>
           </tr>
@@ -264,7 +264,7 @@ export class InvitationsService {
           name: toName || 'Candidate',
         },
       ],
-      subject: `[Invitation] Assessment Access: ${contestTitle} (Batch: ${batchCode})`,
+      subject: `[Invitation] Assessment Access: ${contestTitle}`,
       htmlContent,
     };
 

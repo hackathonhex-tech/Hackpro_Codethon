@@ -26,7 +26,7 @@ export function exportSubmissionsExcel({
 
     return {
       'S.No': index + 1,
-      'Employee ID': s.rollNumber && s.rollNumber !== 'null' ? s.rollNumber : s.userRoll || '—',
+      'Superset ID': s.rollNumber && s.rollNumber !== 'null' ? s.rollNumber : s.userRoll || '—',
       'Candidate Name': s.participantName || s.userName || s.name || 'Candidate',
       'Email Address': s.email || s.userEmail || '—',
       'Contest Title': s.contestTitle || contestTitle,
@@ -84,7 +84,7 @@ export function exportAttendanceExcel({
 
     return {
       'S.No': index + 1,
-      'Employee ID': r.rollNumber && r.rollNumber !== 'null' ? r.rollNumber : '—',
+      'Superset ID': r.rollNumber && r.rollNumber !== 'null' ? r.rollNumber : '—',
       'Candidate Name': r.name || r.participantName || r.userName || 'Candidate',
       'Email Address': r.email || '—',
       'Department': r.department || '—',

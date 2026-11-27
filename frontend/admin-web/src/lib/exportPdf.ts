@@ -148,7 +148,7 @@ export function exportAttendancePdf({
     head: [
       [
         '#',
-        'Employee ID',
+        'Superset ID',
         'Candidate Name',
         'Candidate Email',
         'Team Allocation',
@@ -321,7 +321,7 @@ export function exportSubmissionsPdf({
     head: [
       [
         '#',
-        'Employee ID',
+        'Superset ID',
         'Candidate Name',
         'Email Address',
         'Submission Status',

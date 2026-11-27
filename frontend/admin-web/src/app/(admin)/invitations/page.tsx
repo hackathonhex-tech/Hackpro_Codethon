@@ -315,7 +315,7 @@ function InvitationsContent() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search candidate name, email, roll number..."
+              placeholder="Search candidate name, email, superset ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3.5 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#3760F8]"
@@ -418,9 +418,8 @@ function InvitationsContent() {
                     )}
                   </button>
                 </th>
-                <th className="py-3 px-4">Candidate Name & Roll</th>
+                <th className="py-3 px-4">Candidate Name & Superset ID</th>
                 <th className="py-3 px-4">Registered Email</th>
-                <th className="py-3 px-4">Department / College</th>
                 <th className="py-3 px-4">Batch Code</th>
                 <th className="py-3 px-4">Delivery Status</th>
                 <th className="py-3 px-4">Last Sent</th>
@@ -434,7 +433,6 @@ function InvitationsContent() {
                     <td className="py-3.5 px-4"><div className="w-4 h-4 bg-slate-200 rounded mx-auto" /></td>
                     <td className="py-3.5 px-4"><div className="w-32 h-4 bg-slate-200 rounded" /></td>
                     <td className="py-3.5 px-4"><div className="w-40 h-4 bg-slate-200 rounded" /></td>
-                    <td className="py-3.5 px-4"><div className="w-24 h-4 bg-slate-200 rounded" /></td>
                     <td className="py-3.5 px-4"><div className="w-16 h-4 bg-slate-200 rounded" /></td>
                     <td className="py-3.5 px-4"><div className="w-20 h-5 bg-slate-200 rounded-full" /></td>
                     <td className="py-3.5 px-4"><div className="w-24 h-4 bg-slate-200 rounded" /></td>
@@ -443,7 +441,7 @@ function InvitationsContent() {
                 ))
               ) : filteredParticipants.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 text-xs">
+                  <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
                     No participants match your query.
                   </td>
                 </tr>
@@ -474,9 +472,6 @@ function InvitationsContent() {
                         </div>
                       </td>
                       <td className="py-3 px-4 font-mono text-[11px] text-slate-700">{p.email}</td>
-                      <td className="py-3 px-4 text-slate-500">
-                        {p.department !== '—' ? p.department : p.college}
-                      </td>
                       <td className="py-3 px-4">
                         <span className="inline-block px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-mono font-bold text-[11px] border border-blue-200">
                           {p.batchCode}
@@ -553,8 +548,7 @@ function InvitationsContent() {
                   {previewCandidate?.email || 'student@domain.com'}&gt;
                 </div>
                 <div>
-                  <strong>Subject:</strong> [Invitation] Assessment Access: {contestMeta?.title} (Batch:{' '}
-                  {contestMeta?.batchCode})
+                  <strong>Subject:</strong> [Invitation] Assessment Access: {contestMeta?.title || 'Online Assessment'}
                 </div>
               </div>
 
@@ -594,10 +588,13 @@ function InvitationsContent() {
 
                 <div className="p-4 rounded-xl bg-indigo-50/70 border-2 border-dashed border-indigo-300 text-center space-y-1">
                   <span className="text-[10px] font-black tracking-widest text-indigo-700 uppercase block">
-                    Your Contest Batch Code
+                    Assessment Access Key
                   </span>
-                  <span className="text-2xl font-black font-mono text-[#3760F8] tracking-widest">
-                    {contestMeta?.batchCode || 'BATCH2026'}
+                  <span className="text-sm sm:text-base font-bold text-slate-800 block">
+                    Your Access Key will be provided at the event.
+                  </span>
+                  <span className="text-[11px] text-indigo-600 block">
+                    (You will enter this key along with your registered email to begin)
                   </span>
                 </div>
 
@@ -619,9 +616,8 @@ function InvitationsContent() {
                       </a>
                     </li>
                     <li>Enters their registered email ID.</li>
-                    <li>Enters the assigned contest batch code.</li>
-                    <li>The system verifies the email ID and batch code.</li>
-                    <li>Access is granted only when the contest is active.</li>
+                    <li>Enters the Access Key provided at the event.</li>
+                    <li>Access is granted automatically when the contest is active.</li>
                   </ol>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { userRepository } from '../users/users.repository.js';
 import { teamRepository } from '../teams/teams.repository.js';
 import { assignmentRepository } from '../assignments/assignments.repository.js';
 import { contestRepository } from '../contests/contests.repository.js';
+import { attemptRepository } from '../attempts/attempts.repository.js';
 import { toCsv } from '../../utils/csv.js';
 
 export class AttendanceService {
@@ -14,6 +15,7 @@ export class AttendanceService {
     const allParticipants = await participantRepository.find({});
     const allUsers = await userRepository.find({});
     const allTeams = await teamRepository.find({});
+    const allAttempts = await attemptRepository.find({ contestId });
 
     // Build complete roster of assigned participants (whether they have started or not)
     const assignedParticipantIds = new Set();
@@ -27,22 +29,54 @@ export class AttendanceService {
 
     const roster = [];
 
-    // Include all assigned participants or recorded attendees
-    const relevantParticipantIds = new Set([...assignedParticipantIds, ...records.map((r) => r.userId)]);
+    // Include all assigned participants, recorded attendees, or candidates with attempts
+    const relevantParticipantIds = new Set([
+      ...assignedParticipantIds,
+      ...records.map((r) => r.userId),
+      ...allAttempts.map((a) => a.userId),
+    ]);
 
     for (const pId of relevantParticipantIds) {
       const participant = allParticipants.find((p) => String(p.id) === String(pId) || String(p._id) === String(pId));
       const user = allUsers.find((u) => String(u.id) === String(pId) || String(u._id) === String(pId));
       const record = records.find((r) => String(r.userId) === String(pId));
+      const attempt = allAttempts.find((a) => String(a.userId) === String(pId));
       const team = participant?.teamId ? allTeams.find((t) => String(t.id) === String(participant.teamId)) : null;
 
-      const resolvedName = user?.name || participant?.name || record?.userName || 'Candidate';
+      const resolvedName = user?.name || participant?.name || record?.userName || attempt?.userName || 'Candidate';
       const resolvedEmail = user?.email || participant?.email || record?.userEmail || '—';
-      const resolvedRoll = user?.rollNumber || participant?.rollNumber || record?.rollNumber || '—';
+      const resolvedRoll = user?.rollNumber || participant?.rollNumber || record?.rollNumber || attempt?.userRoll || '—';
       const resolvedDept = user?.department || participant?.department || '—';
 
-      const checkinTime = record?.testStartTimestamp || record?.startedAt || record?.loginTimestamp || null;
-      const turninTime = record?.submitTimestamp || record?.submittedAt || null;
+      let currentStatus = record?.status || 'absent';
+      let checkinTime = record?.testStartTimestamp || record?.startedAt || record?.loginTimestamp || null;
+      let turninTime = record?.submitTimestamp || record?.submittedAt || null;
+      let loginStatus = record?.loginStatus || (record?.status && record?.status !== 'absent' ? 'Logged in' : 'Not logged in');
+
+      // Auto-reconcile with attempt: if student started the test, attendance is automatically marked as present
+      if (attempt) {
+        if (attempt.status === 'submitted') {
+          currentStatus = 'completed';
+          loginStatus = 'Submitted';
+          turninTime = turninTime || attempt.submittedAt || attempt.updatedAt || null;
+          checkinTime = checkinTime || attempt.startedAt || null;
+        } else if (attempt.status === 'in_progress' || attempt.startedAt) {
+          if (currentStatus !== 'completed') {
+            currentStatus = 'present';
+            loginStatus = 'Logged in';
+            checkinTime = checkinTime || attempt.startedAt || null;
+          }
+        }
+      }
+
+      let durationMinutes = record?.durationMinutes || 0;
+      if (checkinTime) {
+        const startMs = new Date(checkinTime).getTime();
+        const endMs = turninTime ? new Date(turninTime).getTime() : Date.now();
+        if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
+          durationMinutes = Math.round((endMs - startMs) / 60000);
+        }
+      }
 
       roster.push({
         id: record?.id || `att_${pId}`,
@@ -58,14 +92,14 @@ export class AttendanceService {
         batchCode: contest?.batchCode || '—',
         teamId: team?.id || null,
         teamName: team?.name || undefined,
-        status: record?.status || 'absent',
-        loginStatus: record?.loginStatus || (record?.status ? 'Logged in' : 'Not logged in'),
-        loginTimestamp: record?.loginTimestamp || null,
+        status: currentStatus,
+        loginStatus,
+        loginTimestamp: record?.loginTimestamp || checkinTime,
         testStartTimestamp: checkinTime,
         submitTimestamp: turninTime,
         startedAt: checkinTime,
         submittedAt: turninTime,
-        durationMinutes: record?.durationMinutes || 0,
+        durationMinutes,
       });
     }
 
@@ -160,7 +194,7 @@ export class AttendanceService {
         'S.No': index + 1,
         'Candidate Name': r.name || r.participantName || 'Candidate',
         'Email Address': r.email || '—',
-        'Roll Number': r.rollNumber || '—',
+        'Superset ID': r.rollNumber || '—',
         'Department': r.department || '—',
         'Contest Title': contest?.title || r.contestTitle || 'Assessment Contest',
         'Batch Code': contest?.batchCode || r.batchCode || '—',
@@ -174,7 +208,7 @@ export class AttendanceService {
     });
 
     if (formattedRecords.length === 0) {
-      return 'S.No,Candidate Name,Email Address,Roll Number,Department,Contest Title,Batch Code,Team Allocation,Attendance Status,Login Status,Test Start Time,Submission Time,Duration (Minutes)\n';
+      return 'S.No,Candidate Name,Email Address,Superset ID,Department,Contest Title,Batch Code,Team Allocation,Attendance Status,Login Status,Test Start Time,Submission Time,Duration (Minutes)\n';
     }
 
     return toCsv(formattedRecords);

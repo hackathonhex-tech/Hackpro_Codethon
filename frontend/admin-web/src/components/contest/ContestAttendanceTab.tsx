@@ -108,7 +108,7 @@ export function ContestAttendanceTab({ contestId }: { contestId: string }) {
   const columns = [
     {
       key: 'rollNumber',
-      header: 'Roll No.',
+      header: 'Superset ID',
       render: (r: AttendanceRecord) => (
         <span className="font-mono font-bold text-xs text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
           {r.rollNumber}
@@ -324,7 +324,7 @@ export function ContestAttendanceTab({ contestId }: { contestId: string }) {
 
         <div className="w-full sm:w-72">
           <Input
-            placeholder="Search candidate, Employee ID, or team..."
+            placeholder="Search candidate, Superset ID, or team..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

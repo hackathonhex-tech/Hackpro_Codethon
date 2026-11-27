@@ -146,7 +146,7 @@ export default function AttendancePage() {
   const columns = [
     {
       key: 'rollNumber',
-      header: 'Roll No.',
+      header: 'Superset ID',
       render: (r: AttendanceRecord) => (
         <span className="font-mono font-bold text-xs text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
           {r.rollNumber && r.rollNumber !== 'null' ? r.rollNumber : '—'}
@@ -404,7 +404,7 @@ export default function AttendancePage() {
 
         <div className="w-full sm:w-72">
           <Input
-            placeholder="Search by name, roll no, or team..."
+            placeholder="Search by name, superset ID, or team..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
