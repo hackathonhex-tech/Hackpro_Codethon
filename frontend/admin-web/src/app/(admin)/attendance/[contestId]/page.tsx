@@ -31,6 +31,7 @@ interface AttendanceRecord {
   teamName?: string;
   status: 'absent' | 'present' | 'completed' | string;
   startedAt?: string | null;
+  testStartTimestamp?: string | null;
   submittedAt?: string | null;
   loginStatus?: string;
   durationMinutes?: number;
@@ -196,7 +197,7 @@ export default function AttendancePage() {
           {r.status === 'completed'
             ? 'Submitted'
             : r.status === 'present'
-            ? 'Testing (Active)'
+            ? (r.testStartTimestamp || r.startedAt ? 'Testing (Active)' : 'Present (Logged In)')
             : 'Absent'}
         </Badge>
       ),

@@ -145,7 +145,7 @@ export function ContestAttendanceTab({ contestId }: { contestId: string }) {
           {r.status === 'completed'
             ? 'Submitted'
             : r.status === 'present'
-            ? 'Testing (Started)'
+            ? (r.testStartTimestamp || r.startedAt ? 'Testing (Started)' : 'Present (Logged In)')
             : 'Not Started / Absent'}
         </Badge>
       ),

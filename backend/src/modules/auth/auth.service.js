@@ -4,6 +4,7 @@ import { refreshTokenRepository } from './refreshToken.repository.js';
 import { contestRepository } from '../contests/contests.repository.js';
 import { assignmentRepository } from '../assignments/assignments.repository.js';
 import { participantRepository } from '../participants/participants.repository.js';
+import { attendanceRepository } from '../attendance/attendance.repository.js';
 import { comparePassword, hashPassword } from '../../utils/password.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt.js';
 import { ApiError } from '../../utils/ApiError.js';
@@ -87,6 +88,73 @@ export class AuthService {
 
     if (!isMatch) {
       throw ApiError.unauthorized('Invalid email/roll number or password', 'INVALID_CREDENTIALS');
+    }
+
+    // Auto-mark candidate attendance as Present immediately upon login with access key or credentials
+    if (!isStaffAccount) {
+      const nowIso = new Date().toISOString();
+      const targetContests = [];
+      if (matchedBatchContest) {
+        targetContests.push(matchedBatchContest);
+      }
+
+      // Also include contests assigned to this student or matching student batchCode
+      const studentBatch = String(user.batchCode || '').trim().toLowerCase();
+      for (const c of allContests) {
+        if (targetContests.some((tc) => String(tc.id) === String(c.id))) continue;
+        if (studentBatch && c.batchCode && c.batchCode.trim().toLowerCase() === studentBatch) {
+          targetContests.push(c);
+        }
+      }
+
+      try {
+        const userAssignments = await assignmentRepository.findByParticipant(user.id);
+        for (const a of userAssignments || []) {
+          const cId = a.contestId || a.id;
+          const assignedC = allContests.find((c) => String(c.id) === String(cId) || String(c._id) === String(cId));
+          if (assignedC && !targetContests.some((tc) => String(tc.id) === String(assignedC.id))) {
+            targetContests.push(assignedC);
+          }
+        }
+      } catch (_) {}
+
+      // If no contest matched yet, but there is an active/live contest or only 1 contest
+      if (targetContests.length === 0 && allContests.length > 0) {
+        const liveContests = allContests.filter((c) => c.status === 'live' || !c.isTurnedOff);
+        if (liveContests.length === 1) {
+          targetContests.push(liveContests[0]);
+        }
+      }
+
+      for (const targetContest of targetContests) {
+        try {
+          const cId = targetContest.id || targetContest._id;
+          const existingAtt = await attendanceRepository.findByContestAndUser(cId, user.id);
+          if (existingAtt) {
+            if (existingAtt.status !== 'completed') {
+              await attendanceRepository.update(existingAtt.id, {
+                status: 'present',
+                loginStatus: 'Logged in',
+                loginTimestamp: existingAtt.loginTimestamp || nowIso,
+              });
+            }
+          } else {
+            await attendanceRepository.create({
+              contestId: cId,
+              userId: user.id,
+              userName: user.name,
+              rollNumber: user.rollNumber,
+              teamId: null,
+              status: 'present',
+              loginStatus: 'Logged in',
+              loginTimestamp: nowIso,
+              testStartTimestamp: null,
+              submitTimestamp: null,
+              durationMinutes: 0,
+            });
+          }
+        } catch (_) {}
+      }
     }
 
     // Resolve user's permissions
