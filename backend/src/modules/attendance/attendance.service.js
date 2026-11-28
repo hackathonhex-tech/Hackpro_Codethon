@@ -5,6 +5,7 @@ import { teamRepository } from '../teams/teams.repository.js';
 import { assignmentRepository } from '../assignments/assignments.repository.js';
 import { contestRepository } from '../contests/contests.repository.js';
 import { attemptRepository } from '../attempts/attempts.repository.js';
+import { refreshTokenRepository } from '../auth/refreshToken.repository.js';
 import { toCsv } from '../../utils/csv.js';
 
 export class AttendanceService {
@@ -16,6 +17,7 @@ export class AttendanceService {
     const allUsers = await userRepository.find({});
     const allTeams = await teamRepository.find({});
     const allAttempts = await attemptRepository.find({ contestId });
+    const allTokens = await refreshTokenRepository.find({ isRevoked: false });
 
     // Build complete roster of assigned participants (whether they have started or not)
     const assignedParticipantIds = new Set();
@@ -67,6 +69,14 @@ export class AttendanceService {
             checkinTime = checkinTime || attempt.startedAt || null;
           }
         }
+      }
+
+      // Retroactive login reconciliation: if student previously logged in (has active session or login timestamp)
+      const userToken = allTokens.find((t) => String(t.userId) === String(pId));
+      if (userToken && currentStatus === 'absent') {
+        currentStatus = 'present';
+        loginStatus = 'Logged in';
+        checkinTime = checkinTime || userToken.createdAt || record?.loginTimestamp || user?.updatedAt || null;
       }
 
       let durationMinutes = record?.durationMinutes || 0;
