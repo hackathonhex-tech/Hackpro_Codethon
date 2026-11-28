@@ -163,15 +163,22 @@ export class AttemptsService {
     const contest = await contestRepository.findById(contestId);
     if (!contest) throw ApiError.notFound('Contest not found');
 
-    const participant = await participantRepository.findById(user.userId);
+    let participant = await participantRepository.findById(user.userId);
+    if (!participant && user.email) {
+      participant = await participantRepository.findByEmail(user.email.toLowerCase());
+    }
     const teamId = participant?.teamId || null;
+    const pId = participant?.id || user.userId;
 
-    const isAssigned = await assignmentRepository.isAssigned(contest.id, user.userId, teamId);
+    const isAssigned =
+      (await assignmentRepository.isAssigned(contest.id, user.userId, teamId)) ||
+      (participant?.id && (await assignmentRepository.isAssigned(contest.id, participant.id, teamId)));
+
     if (!isAssigned && !user.isSuperAdmin && user.role !== 'admin') {
       // Auto-assign candidate so they can take contest smoothly
       await assignmentRepository.create({
         contestId: contest.id,
-        participantId: user.userId,
+        participantId: pId,
         teamId: null,
         assignedAt: new Date().toISOString(),
       });
@@ -388,12 +395,20 @@ export class AttemptsService {
     }
 
     // Auto-assign student if not assigned
-    const participant = await participantRepository.findById(user.userId);
-    const isAssigned = await assignmentRepository.isAssigned(contest.id, user.userId, participant?.teamId);
+    let participant = await participantRepository.findById(user.userId);
+    if (!participant && user.email) {
+      participant = await participantRepository.findByEmail(user.email.toLowerCase());
+    }
+    const teamId = participant?.teamId || null;
+    const pId = participant?.id || user.userId;
+    const isAssigned =
+      (await assignmentRepository.isAssigned(contest.id, user.userId, teamId)) ||
+      (participant?.id && (await assignmentRepository.isAssigned(contest.id, participant.id, teamId)));
+
     if (!isAssigned) {
       await assignmentRepository.create({
         contestId: contest.id,
-        participantId: user.userId,
+        participantId: pId,
         teamId: null,
         assignedAt: new Date().toISOString(),
       });

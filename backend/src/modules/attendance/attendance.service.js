@@ -39,10 +39,30 @@ export class AttendanceService {
     ]);
 
     for (const pId of relevantParticipantIds) {
-      const participant = allParticipants.find((p) => String(p.id) === String(pId) || String(p._id) === String(pId));
-      const user = allUsers.find((u) => String(u.id) === String(pId) || String(u._id) === String(pId));
-      const record = records.find((r) => String(r.userId) === String(pId));
-      const attempt = allAttempts.find((a) => String(a.userId) === String(pId));
+      let participant = allParticipants.find((p) => String(p.id) === String(pId) || String(p._id) === String(pId));
+      let user = allUsers.find((u) => String(u.id) === String(pId) || String(u._id) === String(pId));
+
+      if (!participant && user?.email) {
+        participant = allParticipants.find((p) => p.email && p.email.toLowerCase() === user.email.toLowerCase());
+      }
+      if (!user && participant?.email) {
+        user = allUsers.find((u) => u.email && u.email.toLowerCase() === participant.email.toLowerCase());
+      }
+
+      const candidateUser = user || participant;
+      const candidatePart = participant || user;
+
+      const record = records.find((r) =>
+        String(r.userId) === String(pId) ||
+        (user?.id && String(r.userId) === String(user.id)) ||
+        (participant?.id && String(r.userId) === String(participant.id)) ||
+        (candidateUser?.email && r.userEmail && r.userEmail.toLowerCase() === candidateUser.email.toLowerCase())
+      );
+      const attempt = allAttempts.find((a) =>
+        String(a.userId) === String(pId) ||
+        (user?.id && String(a.userId) === String(user.id)) ||
+        (participant?.id && String(a.userId) === String(participant.id))
+      );
       const team = participant?.teamId ? allTeams.find((t) => String(t.id) === String(participant.teamId)) : null;
 
       const resolvedName = user?.name || participant?.name || record?.userName || attempt?.userName || 'Candidate';
@@ -113,7 +133,53 @@ export class AttendanceService {
       });
     }
 
-    let filtered = roster;
+    // Deduplicate roster by unique candidate email and/or rollNumber/superset ID
+    const deduplicatedMap = new Map();
+
+    for (const item of roster) {
+      const emailKey = item.email && item.email !== '—' && item.email !== 'null'
+        ? `email:${item.email.trim().toLowerCase()}`
+        : null;
+      const rollKey = item.rollNumber && item.rollNumber !== '—' && item.rollNumber !== 'null'
+        ? `roll:${String(item.rollNumber).trim().replace(/^EMP/i, '').toLowerCase()}`
+        : null;
+      const key = emailKey || rollKey || `id:${item.userId}`;
+
+      const existing = deduplicatedMap.get(key);
+      if (!existing) {
+        deduplicatedMap.set(key, item);
+      } else {
+        // Merge: Active status ('completed' or 'present') overrides 'absent'
+        const isBetterStatus =
+          (item.status === 'completed') ||
+          (item.status === 'present' && existing.status !== 'completed');
+
+        if (isBetterStatus) {
+          deduplicatedMap.set(key, {
+            ...existing,
+            ...item,
+            id: existing.id || item.id,
+            _id: existing._id || item._id,
+            participantName: (item.participantName && item.participantName !== 'Candidate') ? item.participantName : existing.participantName,
+            email: (item.email && item.email !== '—') ? item.email : existing.email,
+            rollNumber: (item.rollNumber && item.rollNumber !== '—') ? item.rollNumber : existing.rollNumber,
+            department: (item.department && item.department !== '—') ? item.department : existing.department,
+            teamName: item.teamName || existing.teamName,
+            status: item.status,
+            loginStatus: item.loginStatus || existing.loginStatus,
+            startedAt: item.startedAt || existing.startedAt,
+            testStartTimestamp: item.testStartTimestamp || existing.testStartTimestamp,
+            submittedAt: item.submittedAt || existing.submittedAt,
+            submitTimestamp: item.submitTimestamp || existing.submitTimestamp,
+            durationMinutes: item.durationMinutes || existing.durationMinutes,
+          });
+        }
+      }
+    }
+
+    const uniqueRoster = Array.from(deduplicatedMap.values());
+
+    let filtered = uniqueRoster;
     if (query.status) {
       filtered = filtered.filter((r) => r.status === query.status);
     }
@@ -163,9 +229,9 @@ export class AttendanceService {
     }
 
     return {
-      totalAssigned: roster.length,
-      totalPresent: roster.filter((r) => r.status === 'present' || r.status === 'completed').length,
-      totalSubmitted: roster.filter((r) => r.status === 'completed').length,
+      totalAssigned: uniqueRoster.length,
+      totalPresent: uniqueRoster.filter((r) => r.status === 'present' || r.status === 'completed').length,
+      totalSubmitted: uniqueRoster.filter((r) => r.status === 'completed').length,
       records: paginatedRecords,
       totalRecords: totalFiltered,
       pagination: pagination || {
