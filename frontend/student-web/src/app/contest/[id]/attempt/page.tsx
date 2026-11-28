@@ -104,6 +104,13 @@ interface AttemptState {
   id?: string;
   status: string;
   remainingSeconds: number;
+  endsAt?: string;
+  attempt?: {
+    endsAt?: string;
+    startedAt?: string;
+    remainingSeconds?: number;
+    status?: string;
+  };
   sections?: Section[];
   questions?: Question[];
   savedAnswers?: any[];
@@ -297,16 +304,10 @@ export default function AttemptPage() {
     return [];
   }, [attempt]);
 
-  // Timer Setup
+  // Timer Setup (Authoritative Server Wall-Clock Timing)
   const [remaining, setRemaining] = useState<number>(0);
   const expiredRef = useRef(false);
   const isSubmittingRef = useRef(false);
-
-  useEffect(() => {
-    if (attempt?.remainingSeconds && attempt.remainingSeconds > 0) {
-      setRemaining(attempt.remainingSeconds);
-    }
-  }, [attempt?.remainingSeconds]);
 
   // Finish Attempt Mutation
   const finishMutation = useMutation({
@@ -318,13 +319,17 @@ export default function AttemptPage() {
       if (typeof document !== 'undefined' && document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
-      router.push(`/contest/${contestId}/results`);
+      if (typeof window !== 'undefined') {
+        window.location.href = `/contest/${contestId}/results`;
+      }
     },
     onError: () => {
       if (typeof document !== 'undefined' && document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
-      router.push(`/contest/${contestId}/results`);
+      if (typeof window !== 'undefined') {
+        window.location.href = `/contest/${contestId}/results`;
+      }
     },
   });
 
@@ -334,6 +339,62 @@ export default function AttemptPage() {
       finishMutation.mutate();
     }
   }, [finishMutation]);
+
+  // Authoritative remaining seconds calculation based on server endsAt
+  const calculateRemainingSeconds = useCallback(() => {
+    const targetEndsAt = attempt?.endsAt || attempt?.attempt?.endsAt;
+    if (!targetEndsAt) {
+      return typeof attempt?.remainingSeconds === 'number' ? attempt.remainingSeconds : 0;
+    }
+    const endMs = new Date(targetEndsAt).getTime();
+    if (isNaN(endMs)) {
+      return typeof attempt?.remainingSeconds === 'number' ? attempt.remainingSeconds : 0;
+    }
+    const diff = Math.floor((endMs - Date.now()) / 1000);
+    return Math.max(0, diff);
+  }, [attempt?.endsAt, attempt?.attempt?.endsAt, attempt?.remainingSeconds]);
+
+  // Live Wall-Clock Timer: immune to mobile background sleep or clock drift
+  useEffect(() => {
+    if (!attempt) return;
+    const current = calculateRemainingSeconds();
+    setRemaining(current);
+
+    if (current <= 0 && attempt.status === 'in_progress') {
+      handleExpire();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const rem = calculateRemainingSeconds();
+      setRemaining(rem);
+      if (rem <= 0) {
+        clearInterval(interval);
+        handleExpire();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [attempt, calculateRemainingSeconds, handleExpire]);
+
+  // Window visibility / mobile app resume listener: auto-submit instantly if time ran out while device was asleep
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && attempt?.status === 'in_progress') {
+        const rem = calculateRemainingSeconds();
+        setRemaining(rem);
+        if (rem <= 0) {
+          handleExpire();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onVisibilityChange);
+    };
+  }, [attempt?.status, calculateRemainingSeconds, handleExpire]);
 
   // Real-time listener: if admin turns OFF contest, auto-submit and lock immediately
   useEffect(() => {
@@ -363,24 +424,11 @@ export default function AttemptPage() {
   // If attempt was already submitted, redirect candidate immediately to results
   useEffect(() => {
     if (attempt?.status === 'submitted' || attempt?.status === 'graded') {
-      router.replace(`/contest/${contestId}/results`);
+      if (typeof window !== 'undefined') {
+        window.location.href = `/contest/${contestId}/results`;
+      }
     }
-  }, [attempt?.status, contestId, router]);
-
-  useEffect(() => {
-    if (remaining <= 0) return;
-    const interval = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          handleExpire();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [remaining, handleExpire]);
+  }, [attempt?.status, contestId]);
 
   const formatTimer = (secs: number) => {
     const h = Math.floor(secs / 3600);

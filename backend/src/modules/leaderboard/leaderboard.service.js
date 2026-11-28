@@ -2,6 +2,8 @@ import { attemptRepository } from '../attempts/attempts.repository.js';
 import { contestRepository } from '../contests/contests.repository.js';
 import { participantRepository } from '../participants/participants.repository.js';
 import { teamRepository } from '../teams/teams.repository.js';
+import { attemptsService } from '../attempts/attempts.service.js';
+import { calculateAttemptTiming } from '../../utils/time.js';
 import { LEADERBOARD_DISPLAY_MODE } from '@codeathon/shared';
 import { ApiError } from '../../utils/ApiError.js';
 
@@ -26,7 +28,33 @@ export class LeaderboardService {
     const freezeMs = (config.freezeMinutesBeforeEnd || 0) * 60 * 1000;
     const isFrozen = freezeMs > 0 && now >= endWindow - freezeMs && now <= endWindow;
 
-    const attempts = await attemptRepository.find({ contestId });
+    let attempts = await attemptRepository.find({ contestId });
+
+    // Auto-finalize and grade any in-progress attempt whose exam window / duration has expired
+    const isManual = contest.activationMode === 'manual';
+    let hadExpired = false;
+    for (const att of attempts) {
+      if (att.status === 'in_progress') {
+        const timing = calculateAttemptTiming(
+          att.startedAt,
+          contest.durationMinutes,
+          contest.endTime,
+          contest.gracePeriodMinutes || 0,
+          att.extensionSeconds || 0,
+          isManual
+        );
+        if (timing.isExpired) {
+          try {
+            await attemptsService.finishAttempt(contestId, { userId: att.userId }, 'time_expired');
+            hadExpired = true;
+          } catch (_) {}
+        }
+      }
+    }
+    if (hadExpired) {
+      attempts = await attemptRepository.find({ contestId });
+    }
+
     const allParticipants = await participantRepository.find({});
     const allTeams = await teamRepository.find({});
 

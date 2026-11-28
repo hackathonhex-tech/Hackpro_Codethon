@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { leaderboardApi } from '@/lib/api';
+import { leaderboardApi, contestsApi } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
@@ -47,6 +47,11 @@ export function ContestLeaderboardTab({ contestId }: { contestId: string }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const { data: contestData } = useQuery({
+    queryKey: ['contest', contestId],
+    queryFn: () => contestsApi.get(contestId),
+  });
 
   const { data: lbData, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['leaderboard-admin', contestId],
@@ -216,64 +221,76 @@ export function ContestLeaderboardTab({ contestId }: { contestId: string }) {
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200/80">
-              <thead className="bg-slate-50/80">
-                <tr>
-                  {['Rank', 'Participant', 'Employee ID', 'Allocation', 'MCQ Marks', 'Coding Marks', 'Total Score', 'Time Taken'].map((h) => (
-                    <th key={h} className="px-5 py-3.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {entries.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-16 text-xs text-slate-400">
-                      No candidate submissions recorded on the leaderboard yet.
-                    </td>
-                  </tr>
-                ) : (
-                  entries.map((entry) => (
-                    <tr key={entry.participantId} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <span className={`w-7 h-7 inline-flex items-center justify-center rounded-xl text-xs font-bold ${
-                          (entry.displayRank || entry.rank) === 1
-                            ? 'bg-[#D3FE4F] text-[#0B0F19] shadow-xs'
-                            : (entry.displayRank || entry.rank) <= 3
-                            ? 'bg-[#3760F8] text-white shadow-xs'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          #{entry.displayRank || entry.rank}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-xs font-semibold text-slate-900 tracking-tight">
-                        {entry.displayName}
-                      </td>
-                      <td className="px-5 py-3.5 text-xs font-mono text-slate-500">{entry.rollNumber || '—'}</td>
-                      <td className="px-5 py-3.5 text-xs">
-                        {entry.teamName ? (
-                          <Badge color="neon">{entry.teamName}</Badge>
-                        ) : (
-                          <span className="text-slate-400 font-medium">Individual</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-xs font-mono text-slate-700">{entry.mcqScore ?? 0} Marks</td>
-                      <td className="px-5 py-3.5 text-xs font-mono text-slate-700">{entry.codingScore ?? 0} Marks</td>
-                      <td className="px-5 py-3.5 text-xs font-mono font-extrabold text-[#3760F8]">
-                        {entry.totalScore} Marks
-                      </td>
-                      <td className="px-5 py-3.5 text-xs">
-                        <span className="inline-flex items-center gap-1.5 font-mono text-slate-700 font-semibold bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          {entry.formattedTimeTaken || '—'}
-                        </span>
-                      </td>
+            {(() => {
+              const hasMcq = Boolean((contestData as any)?.enableMcq && (entries.some((e) => (e.mcqScore ?? 0) > 0) || (contestData as any)?.expectedMcqCount > 0));
+              const headers = hasMcq
+                ? ['Rank', 'Participant', 'Employee ID', 'Allocation', 'MCQ Marks', 'Coding Marks', 'Total Score', 'Time Taken']
+                : ['Rank', 'Participant', 'Employee ID', 'Allocation', 'Coding Marks', 'Total Score', 'Time Taken'];
+              const colSpan = headers.length;
+
+              return (
+                <table className="min-w-full divide-y divide-slate-200/80">
+                  <thead className="bg-slate-50/80">
+                    <tr>
+                      {headers.map((h) => (
+                        <th key={h} className="px-5 py-3.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {entries.length === 0 ? (
+                      <tr>
+                        <td colSpan={colSpan} className="text-center py-16 text-xs text-slate-400">
+                          No candidate submissions recorded on the leaderboard yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      entries.map((entry) => (
+                        <tr key={entry.participantId} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="px-5 py-3.5">
+                            <span className={`w-7 h-7 inline-flex items-center justify-center rounded-xl text-xs font-bold ${
+                              (entry.displayRank || entry.rank) === 1
+                                ? 'bg-[#D3FE4F] text-[#0B0F19] shadow-xs'
+                                : (entry.displayRank || entry.rank) <= 3
+                                ? 'bg-[#3760F8] text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              #{entry.displayRank || entry.rank}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-xs font-semibold text-slate-900 tracking-tight">
+                            {entry.displayName}
+                          </td>
+                          <td className="px-5 py-3.5 text-xs font-mono text-slate-500">{entry.rollNumber || '—'}</td>
+                          <td className="px-5 py-3.5 text-xs">
+                            {entry.teamName ? (
+                              <Badge color="neon">{entry.teamName}</Badge>
+                            ) : (
+                              <span className="text-slate-400 font-medium">Individual</span>
+                            )}
+                          </td>
+                          {hasMcq && (
+                            <td className="px-5 py-3.5 text-xs font-mono text-slate-700">{entry.mcqScore ?? 0} Marks</td>
+                          )}
+                          <td className="px-5 py-3.5 text-xs font-mono text-slate-700">{entry.codingScore ?? 0} Marks</td>
+                          <td className="px-5 py-3.5 text-xs font-mono font-extrabold text-[#3760F8]">
+                            {entry.totalScore} Marks
+                          </td>
+                          <td className="px-5 py-3.5 text-xs">
+                            <span className="inline-flex items-center gap-1.5 font-mono text-slate-700 font-semibold bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              {entry.formattedTimeTaken || '—'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              );
+            })()}
           </div>
         </div>
       )}

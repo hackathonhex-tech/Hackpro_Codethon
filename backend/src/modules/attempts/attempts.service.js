@@ -617,11 +617,15 @@ export class AttemptsService {
     const codeRunCooldownSeconds = contest.codeRunCooldownSeconds ?? 30;
     const maxCodeSubmissions = contest.maxCodeSubmissions ?? 3;
 
-    const completionSecs = attempt.completionTimeSeconds != null
+    const maxContestSecs = (Number(contest.durationMinutes) || 30) * 60 + (attempt.extensionSeconds || 0);
+    const rawCompletionSecs = attempt.completionTimeSeconds != null
       ? attempt.completionTimeSeconds
       : (attempt.submittedAt && attempt.startedAt
           ? Math.max(0, Math.floor((new Date(attempt.submittedAt).getTime() - new Date(attempt.startedAt).getTime()) / 1000))
           : null);
+    const completionSecs = rawCompletionSecs != null && maxContestSecs > 0
+      ? Math.min(rawCompletionSecs, maxContestSecs)
+      : rawCompletionSecs;
     const formattedTime = formatDuration(completionSecs);
 
     return {
@@ -630,6 +634,8 @@ export class AttemptsService {
         title: contest.title,
         description: contest.description,
         instructions: contest.instructions,
+        enableMcq: contest.enableMcq !== false,
+        durationMinutes: contest.durationMinutes || 30,
         proctorConfig: contest.proctorConfig || {},
         showTotalPointsEarned: contest.showTotalPointsEarned !== false,
         resultVisibility: contest.resultVisibility || 'immediate',
@@ -1073,7 +1079,14 @@ export class AttemptsService {
 
     const now = new Date();
     const startTimeMs = new Date(attempt.startedAt).getTime();
-    const completionTimeSeconds = Math.max(0, Math.floor((now.getTime() - startTimeMs) / 1000));
+    const durationMinutes = Number(contest?.durationMinutes) > 0 ? Number(contest.durationMinutes) : 30;
+    const extensionSeconds = Number(attempt.extensionSeconds) || 0;
+    const maxDurationSeconds = durationMinutes * 60 + extensionSeconds;
+
+    // Enforce strict upper bound: time taken can never exceed contest duration
+    const rawDiffSecs = Math.max(0, Math.floor((now.getTime() - startTimeMs) / 1000));
+    const completionTimeSeconds = Math.min(rawDiffSecs, maxDurationSeconds);
+    const submittedAt = new Date(startTimeMs + completionTimeSeconds * 1000).toISOString();
 
     // Calculate total marks and scores obtained across each question
     const totalMarksPossible = mcqMaxScore + codingMaxScore;
@@ -1093,7 +1106,6 @@ export class AttemptsService {
 
     const scoreBreakdown = typeof rubricResult === 'object' ? rubricResult.breakdown : null;
     const finalScore = totalScoreEarned;
-    const submittedAt = now.toISOString();
 
     const updatedAttempt = await attemptRepository.update(attempt.id, {
       status: ATTEMPT_STATUS.SUBMITTED,

@@ -160,13 +160,19 @@ export default function ResultsPage() {
   const codingScore = rawAttempt.codingScore ?? 0;
   const submittedAt = rawAttempt.submittedAt || rawAttempt.updatedAt;
   const startedAt = rawAttempt.startedAt;
-  const secs = Number(rawAttempt.completionTimeSeconds) > 0
+  const durationMins = Number(contestInfo?.durationMinutes) > 0 ? Number(contestInfo.durationMinutes) : 30;
+  const maxDurationSecs = durationMins * 60;
+
+  const rawSecs = Number(rawAttempt.completionTimeSeconds) > 0
     ? Number(rawAttempt.completionTimeSeconds)
     : (submittedAt && startedAt
         ? Math.max(1, Math.floor((new Date(submittedAt).getTime() - new Date(startedAt).getTime()) / 1000))
         : 0);
 
-  const formattedAttemptTime = rawAttempt.formattedTimeTaken && rawAttempt.formattedTimeTaken !== '—'
+  // Clamp time taken so it never exceeds the contest's maximum duration (e.g. 30 mins)
+  const secs = rawSecs > 0 ? Math.min(rawSecs, maxDurationSecs) : 0;
+
+  const formattedAttemptTime = rawAttempt.formattedTimeTaken && rawAttempt.formattedTimeTaken !== '—' && rawSecs <= maxDurationSecs
     ? rawAttempt.formattedTimeTaken
     : (secs > 0
         ? (secs >= 3600
@@ -249,23 +255,31 @@ export default function ResultsPage() {
                 <span>Time Taken to Complete: <strong className="font-mono text-slate-900 ml-1">{formattedAttemptTime}</strong></span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 sm:gap-4 text-left">
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">MCQ Marks</span>
-                  <div className="text-xl font-bold text-slate-900 mt-1">{mcqScore}</div>
-                </div>
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Coding Marks</span>
-                  <div className="text-xl font-bold text-slate-900 mt-1">{codingScore}</div>
-                </div>
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-[#3760F8]" />
-                    Time Taken
-                  </span>
-                  <div className="text-xl font-bold text-slate-900 mt-1 font-mono">{formattedAttemptTime}</div>
-                </div>
-              </div>
+              {/* Dynamic 2-card (Coding Only) or 3-card (MCQ + Coding) Breakdown */}
+              {(() => {
+                const hasMcq = Boolean(contestInfo?.enableMcq && (mcqScore > 0 || (contestInfo?.expectedMcqCount && contestInfo.expectedMcqCount > 0)));
+                return (
+                  <div className={`grid ${hasMcq ? 'grid-cols-3' : 'grid-cols-2'} gap-3 sm:gap-4 text-left`}>
+                    {hasMcq && (
+                      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">MCQ Marks</span>
+                        <div className="text-xl font-bold text-slate-900 mt-1">{mcqScore}</div>
+                      </div>
+                    )}
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Coding Marks</span>
+                      <div className="text-xl font-bold text-slate-900 mt-1">{codingScore}</div>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-[#3760F8]" />
+                        Time Taken
+                      </span>
+                      <div className="text-xl font-bold text-slate-900 mt-1 font-mono">{formattedAttemptTime}</div>
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           ) : (
             <div className="py-6 space-y-3">

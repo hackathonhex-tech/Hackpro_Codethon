@@ -2,6 +2,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { ATTEMPT_STATUS } from '@codeathon/shared';
 import { attemptRepository } from '../modules/attempts/attempts.repository.js';
 import { contestRepository } from '../modules/contests/contests.repository.js';
+import { attemptsService } from '../modules/attempts/attempts.service.js';
 import { calculateAttemptTiming } from '../utils/time.js';
 
 export const attemptGuard = async (req, res, next) => {
@@ -27,21 +28,27 @@ export const attemptGuard = async (req, res, next) => {
       return next(ApiError.notFound('Contest not found', 'CONTEST_NOT_FOUND'));
     }
 
+    const isManual = contest.activationMode === 'manual';
     const timing = calculateAttemptTiming(
       attempt.startedAt,
       contest.durationMinutes,
       contest.endTime,
       contest.gracePeriodMinutes || 0,
-      attempt.extensionSeconds || 0
+      attempt.extensionSeconds || 0,
+      isManual
     );
 
     if (timing.isExpired) {
-      // Mark as submitted / timed out
-      await attemptRepository.update(attempt.id, {
-        status: ATTEMPT_STATUS.SUBMITTED,
-        submittedAt: new Date().toISOString(),
-        submissionReason: 'time_expired',
-      });
+      // Auto-submit and grade attempt immediately
+      try {
+        await attemptsService.finishAttempt(contestId, { userId }, 'time_expired');
+      } catch (_) {
+        await attemptRepository.update(attempt.id, {
+          status: ATTEMPT_STATUS.SUBMITTED,
+          submittedAt: new Date().toISOString(),
+          submissionReason: 'time_expired',
+        });
+      }
       return next(ApiError.attemptLocked('Contest time has expired. Your test has been submitted automatically.'));
     }
 
