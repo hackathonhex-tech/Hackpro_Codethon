@@ -19,173 +19,278 @@ export class AttendanceService {
     const allAttempts = await attemptRepository.find({ contestId });
     const allTokens = await refreshTokenRepository.find({ isRevoked: false });
 
-    // Build complete roster of assigned participants (whether they have started or not)
+    // Build complete roster of assigned participants
     const assignedParticipantIds = new Set();
     assignments.forEach((a) => {
-      if (a.participantId) assignedParticipantIds.add(a.participantId);
+      if (a.participantId) assignedParticipantIds.add(String(a.participantId));
       if (a.teamId) {
-        const team = allTeams.find((t) => t.id === a.teamId);
-        (team?.memberIds || []).forEach((mId) => assignedParticipantIds.add(mId));
+        const team = allTeams.find((t) => String(t.id) === String(a.teamId) || String(t._id) === String(a.teamId));
+        (team?.memberIds || []).forEach((mId) => assignedParticipantIds.add(String(mId)));
       }
     });
 
-    const roster = [];
+    const cleanStr = (s) => (s && typeof s === 'string' ? s.trim() : '');
+    const normalizeEmail = (e) => {
+      const s = cleanStr(e).toLowerCase();
+      return (!s || s === '—' || s === 'null' || s === 'undefined') ? '' : s;
+    };
+    const normalizeRoll = (r) => {
+      const s = cleanStr(r).replace(/^EMP/i, '').toLowerCase();
+      return (!s || s === '—' || s === 'null' || s === 'undefined') ? '' : s;
+    };
+    const cleanId = (id) => (id ? String(id).trim() : '');
 
-    // Include all assigned participants, recorded attendees, or candidates with attempts
-    const relevantParticipantIds = new Set([
-      ...assignedParticipantIds,
-      ...records.map((r) => r.userId),
-      ...allAttempts.map((a) => a.userId),
-    ]);
+    // Canonical roster and deduplication indices
+    const canonicalRoster = [];
+    const emailIndex = new Map();
+    const rollIndex = new Map();
+    const idIndex = new Map();
 
-    for (const pId of relevantParticipantIds) {
-      let participant = allParticipants.find((p) => String(p.id) === String(pId) || String(p._id) === String(pId));
-      let user = allUsers.find((u) => String(u.id) === String(pId) || String(u._id) === String(pId));
+    const upsertCandidate = (item) => {
+      const normEmail = normalizeEmail(item.email);
+      const normRoll = normalizeRoll(item.rollNumber);
+      const ids = [item.userId, item.participantId, item.id, item._id].map(cleanId).filter(Boolean);
 
-      if (!participant && user?.email) {
-        participant = allParticipants.find((p) => p.email && p.email.toLowerCase() === user.email.toLowerCase());
-      }
-      if (!user && participant?.email) {
-        user = allUsers.find((u) => u.email && u.email.toLowerCase() === participant.email.toLowerCase());
-      }
-
-      const candidateUser = user || participant;
-      const candidatePart = participant || user;
-
-      const record = records.find((r) =>
-        String(r.userId) === String(pId) ||
-        (user?.id && String(r.userId) === String(user.id)) ||
-        (participant?.id && String(r.userId) === String(participant.id)) ||
-        (candidateUser?.email && r.userEmail && r.userEmail.toLowerCase() === candidateUser.email.toLowerCase())
-      );
-      const attempt = allAttempts.find((a) =>
-        String(a.userId) === String(pId) ||
-        (user?.id && String(a.userId) === String(user.id)) ||
-        (participant?.id && String(a.userId) === String(participant.id))
-      );
-      const team = participant?.teamId ? allTeams.find((t) => String(t.id) === String(participant.teamId)) : null;
-
-      const resolvedName = user?.name || participant?.name || record?.userName || attempt?.userName || 'Candidate';
-      const resolvedEmail = user?.email || participant?.email || record?.userEmail || '—';
-      const resolvedRoll = user?.rollNumber || participant?.rollNumber || record?.rollNumber || attempt?.userRoll || '—';
-      const resolvedDept = user?.department || participant?.department || '—';
-
-      let currentStatus = record?.status || 'absent';
-      let checkinTime = record?.testStartTimestamp || record?.startedAt || record?.loginTimestamp || null;
-      let turninTime = record?.submitTimestamp || record?.submittedAt || null;
-      let loginStatus = record?.loginStatus || (record?.status && record?.status !== 'absent' ? 'Logged in' : 'Not logged in');
-
-      // Auto-reconcile with attempt: if student started the test, attendance is automatically marked as present
-      if (attempt) {
-        if (attempt.status === 'submitted') {
-          currentStatus = 'completed';
-          loginStatus = 'Submitted';
-          turninTime = turninTime || attempt.submittedAt || attempt.updatedAt || null;
-          checkinTime = checkinTime || attempt.startedAt || null;
-        } else if (attempt.status === 'in_progress' || attempt.startedAt) {
-          if (currentStatus !== 'completed') {
-            currentStatus = 'present';
-            loginStatus = 'Logged in';
-            checkinTime = checkinTime || attempt.startedAt || null;
+      let existing = null;
+      if (normEmail && emailIndex.has(normEmail)) {
+        existing = emailIndex.get(normEmail);
+      } else if (normRoll && rollIndex.has(normRoll)) {
+        existing = rollIndex.get(normRoll);
+      } else {
+        for (const id of ids) {
+          if (id && idIndex.has(id)) {
+            existing = idIndex.get(id);
+            break;
           }
         }
       }
 
-      // Retroactive login reconciliation: if student previously logged in (has active session or login timestamp)
-      const userToken = allTokens.find((t) => String(t.userId) === String(pId));
-      if (userToken && currentStatus === 'absent') {
-        currentStatus = 'present';
-        loginStatus = 'Logged in';
-        checkinTime = checkinTime || userToken.createdAt || record?.loginTimestamp || user?.updatedAt || null;
-      }
-
-      let durationMinutes = record?.durationMinutes || 0;
-      if (checkinTime) {
-        const startMs = new Date(checkinTime).getTime();
-        const endMs = turninTime ? new Date(turninTime).getTime() : Date.now();
-        if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
-          durationMinutes = Math.round((endMs - startMs) / 60000);
+      if (existing) {
+        // Merge attributes
+        if ((!existing.email || existing.email === '—') && item.email && item.email !== '—') {
+          existing.email = item.email;
         }
+        if ((!existing.rollNumber || existing.rollNumber === '—') && item.rollNumber && item.rollNumber !== '—') {
+          existing.rollNumber = item.rollNumber;
+        }
+        if ((!existing.name || existing.name === 'Candidate') && item.name && item.name !== 'Candidate') {
+          existing.name = item.name;
+          existing.participantName = item.name;
+        }
+        if ((!existing.participantName || existing.participantName === 'Candidate') && item.participantName && item.participantName !== 'Candidate') {
+          existing.participantName = item.participantName;
+        }
+        if ((!existing.department || existing.department === '—') && item.department && item.department !== '—') {
+          existing.department = item.department;
+        }
+        if (!existing.teamName && item.teamName) {
+          existing.teamName = item.teamName;
+          existing.teamId = item.teamId;
+        }
+
+        // Status priority: completed (Submitted) > present (Started / Logged in) > absent
+        if (item.status === 'completed') {
+          existing.status = 'completed';
+          existing.loginStatus = 'Submitted';
+        } else if (item.status === 'present' && existing.status !== 'completed') {
+          existing.status = 'present';
+          existing.loginStatus = item.loginStatus || 'Logged in';
+        }
+
+        if (item.startedAt && (!existing.startedAt || new Date(item.startedAt) < new Date(existing.startedAt))) {
+          existing.startedAt = item.startedAt;
+          existing.testStartTimestamp = item.startedAt;
+        }
+        if (item.submittedAt && (!existing.submittedAt || new Date(item.submittedAt) > new Date(existing.submittedAt))) {
+          existing.submittedAt = item.submittedAt;
+          existing.submitTimestamp = item.submittedAt;
+        }
+        if (item.loginTimestamp && !existing.loginTimestamp) {
+          existing.loginTimestamp = item.loginTimestamp;
+        }
+        if (item.durationMinutes && item.durationMinutes > (existing.durationMinutes || 0)) {
+          existing.durationMinutes = item.durationMinutes;
+        }
+
+        // Re-index all keys pointing to this merged candidate
+        const updatedEmail = normalizeEmail(existing.email);
+        const updatedRoll = normalizeRoll(existing.rollNumber);
+        if (updatedEmail) emailIndex.set(updatedEmail, existing);
+        if (updatedRoll) rollIndex.set(updatedRoll, existing);
+        for (const id of ids) {
+          if (id) idIndex.set(id, existing);
+        }
+        if (existing.userId) idIndex.set(cleanId(existing.userId), existing);
+        if (existing.participantId) idIndex.set(cleanId(existing.participantId), existing);
+        if (existing.id) idIndex.set(cleanId(existing.id), existing);
+        return existing;
       }
 
-      roster.push({
-        id: record?.id || `att_${pId}`,
-        _id: record?.id || `att_${pId}`,
-        userId: pId,
-        participantId: pId,
-        participantName: resolvedName,
-        email: resolvedEmail,
-        rollNumber: resolvedRoll,
-        name: resolvedName,
-        department: resolvedDept,
+      // Insert new entry
+      const entry = {
+        id: item.id || `att_${ids[0] || Math.random().toString(36).slice(2)}`,
+        _id: item._id || item.id || `att_${ids[0] || Math.random().toString(36).slice(2)}`,
+        userId: item.userId || ids[0] || null,
+        participantId: item.participantId || ids[0] || null,
+        name: item.name || item.participantName || 'Candidate',
+        participantName: item.participantName || item.name || 'Candidate',
+        email: item.email || '—',
+        rollNumber: item.rollNumber || '—',
+        department: item.department || '—',
         contestTitle: contest?.title || 'Assessment Contest',
         batchCode: contest?.batchCode || '—',
+        teamId: item.teamId || null,
+        teamName: item.teamName || undefined,
+        status: item.status || 'absent',
+        loginStatus: item.loginStatus || 'Not logged in',
+        loginTimestamp: item.loginTimestamp || null,
+        testStartTimestamp: item.testStartTimestamp || item.startedAt || null,
+        submitTimestamp: item.submitTimestamp || item.submittedAt || null,
+        startedAt: item.startedAt || item.testStartTimestamp || null,
+        submittedAt: item.submittedAt || item.submitTimestamp || null,
+        durationMinutes: item.durationMinutes || 0,
+      };
+
+      canonicalRoster.push(entry);
+      if (normEmail) emailIndex.set(normEmail, entry);
+      if (normRoll) rollIndex.set(normRoll, entry);
+      for (const id of ids) {
+        if (id) idIndex.set(id, entry);
+      }
+      return entry;
+    };
+
+    // Determine whether to populate the roster with all registered candidates (e.g. 630 candidates)
+    // or only assigned candidates. When contest has batchCode (CODE2026), or no explicit assignments exist,
+    // or assignments cover the bulk of participants (>= 500 or >= 70%), include the full candidate pool.
+    const isFullBatchContest =
+      Boolean(contest?.batchCode) ||
+      assignments.length === 0 ||
+      (allParticipants.length > 0 && assignments.length >= Math.min(500, allParticipants.length * 0.7));
+
+    const poolParticipants = isFullBatchContest
+      ? allParticipants
+      : allParticipants.filter((p) => {
+          const pid = String(p.id || p._id || p.userId);
+          return assignedParticipantIds.has(pid);
+        });
+
+    // 1. Seed base roster from participants
+    for (const p of poolParticipants) {
+      const user = allUsers.find((u) =>
+        (u.email && p.email && u.email.toLowerCase() === p.email.toLowerCase()) ||
+        (u.rollNumber && p.rollNumber && u.rollNumber.toLowerCase() === p.rollNumber.toLowerCase()) ||
+        String(u.id) === String(p.id) ||
+        String(u._id) === String(p.id) ||
+        String(u.id) === String(p.userId)
+      );
+      const team = p.teamId ? allTeams.find((t) => String(t.id) === String(p.teamId)) : null;
+
+      upsertCandidate({
+        id: p.id || p._id,
+        _id: p._id || p.id,
+        userId: user?.id || user?._id || p.userId || p.id,
+        participantId: p.id || p._id,
+        name: p.name || user?.name || 'Candidate',
+        participantName: p.name || user?.name || 'Candidate',
+        email: p.email || user?.email || '—',
+        rollNumber: p.rollNumber || user?.rollNumber || '—',
+        department: p.department || user?.department || '—',
         teamId: team?.id || null,
         teamName: team?.name || undefined,
-        status: currentStatus,
-        loginStatus,
-        loginTimestamp: record?.loginTimestamp || checkinTime,
-        testStartTimestamp: checkinTime,
-        submitTimestamp: turninTime,
-        startedAt: checkinTime,
-        submittedAt: turninTime,
-        durationMinutes,
+        status: 'absent',
+        loginStatus: 'Not logged in',
       });
     }
 
-    // Deduplicate roster by unique candidate email and/or rollNumber/superset ID
-    const deduplicatedMap = new Map();
+    // 2. Merge candidate attempts (test started or submitted)
+    for (const attempt of allAttempts) {
+      const attStatus = attempt.status === 'submitted' ? 'completed' : 'present';
+      const attLogin = attempt.status === 'submitted' ? 'Submitted' : 'Logged in';
+      upsertCandidate({
+        userId: attempt.userId,
+        name: attempt.userName,
+        participantName: attempt.userName,
+        rollNumber: attempt.userRoll,
+        status: attStatus,
+        loginStatus: attLogin,
+        startedAt: attempt.startedAt || null,
+        testStartTimestamp: attempt.startedAt || null,
+        submittedAt: attempt.submittedAt || null,
+        submitTimestamp: attempt.submittedAt || null,
+        durationMinutes: attempt.durationMinutes || 0,
+      });
+    }
 
-    for (const item of roster) {
-      const emailKey = item.email && item.email !== '—' && item.email !== 'null'
-        ? `email:${item.email.trim().toLowerCase()}`
-        : null;
-      const rollKey = item.rollNumber && item.rollNumber !== '—' && item.rollNumber !== 'null'
-        ? `roll:${String(item.rollNumber).trim().replace(/^EMP/i, '').toLowerCase()}`
-        : null;
-      const key = emailKey || rollKey || `id:${item.userId}`;
+    // 3. Merge attendance records for this contest
+    for (const record of records) {
+      const recStatus = record.status || 'absent';
+      const recLogin = record.loginStatus || (recStatus !== 'absent' ? 'Logged in' : 'Not logged in');
+      upsertCandidate({
+        userId: record.userId,
+        name: record.userName,
+        participantName: record.userName,
+        rollNumber: record.rollNumber,
+        email: record.userEmail,
+        status: recStatus,
+        loginStatus: recLogin,
+        loginTimestamp: record.loginTimestamp || null,
+        startedAt: record.testStartTimestamp || record.startedAt || record.loginTimestamp || null,
+        testStartTimestamp: record.testStartTimestamp || record.startedAt || record.loginTimestamp || null,
+        submittedAt: record.submitTimestamp || record.submittedAt || null,
+        submitTimestamp: record.submitTimestamp || record.submittedAt || null,
+        durationMinutes: record.durationMinutes || 0,
+      });
+    }
 
-      const existing = deduplicatedMap.get(key);
-      if (!existing) {
-        deduplicatedMap.set(key, item);
-      } else {
-        // Merge: Active status ('completed' or 'present') overrides 'absent'
-        const isBetterStatus =
-          (item.status === 'completed') ||
-          (item.status === 'present' && existing.status !== 'completed');
+    // 4. Retroactive login reconciliation: mark candidates with active login sessions as present
+    for (const token of allTokens) {
+      const tUserId = cleanId(token.userId);
+      if (!tUserId) continue;
 
-        if (isBetterStatus) {
-          deduplicatedMap.set(key, {
-            ...existing,
-            ...item,
-            id: existing.id || item.id,
-            _id: existing._id || item._id,
-            participantName: (item.participantName && item.participantName !== 'Candidate') ? item.participantName : existing.participantName,
-            email: (item.email && item.email !== '—') ? item.email : existing.email,
-            rollNumber: (item.rollNumber && item.rollNumber !== '—') ? item.rollNumber : existing.rollNumber,
-            department: (item.department && item.department !== '—') ? item.department : existing.department,
-            teamName: item.teamName || existing.teamName,
-            status: item.status,
-            loginStatus: item.loginStatus || existing.loginStatus,
-            startedAt: item.startedAt || existing.startedAt,
-            testStartTimestamp: item.testStartTimestamp || existing.testStartTimestamp,
-            submittedAt: item.submittedAt || existing.submittedAt,
-            submitTimestamp: item.submitTimestamp || existing.submitTimestamp,
-            durationMinutes: item.durationMinutes || existing.durationMinutes,
-          });
+      let candidate = idIndex.get(tUserId);
+      if (!candidate) {
+        const u = allUsers.find((usr) => String(usr.id) === tUserId || String(usr._id) === tUserId);
+        if (u) {
+          const normUe = normalizeEmail(u.email);
+          const normUr = normalizeRoll(u.rollNumber);
+          candidate = (normUe && emailIndex.get(normUe)) || (normUr && rollIndex.get(normUr));
+        }
+      }
+
+      if (candidate && candidate.status === 'absent') {
+        candidate.status = 'present';
+        candidate.loginStatus = 'Logged in';
+        if (!candidate.startedAt) {
+          candidate.startedAt = token.createdAt || new Date().toISOString();
+          candidate.testStartTimestamp = candidate.startedAt;
         }
       }
     }
 
-    const uniqueRoster = Array.from(deduplicatedMap.values());
+    // Compute live duration for in-progress candidates
+    for (const item of canonicalRoster) {
+      if (item.testStartTimestamp && (!item.durationMinutes || item.durationMinutes === 0)) {
+        const startMs = new Date(item.testStartTimestamp).getTime();
+        const endMs = item.submitTimestamp ? new Date(item.submitTimestamp).getTime() : Date.now();
+        if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
+          item.durationMinutes = Math.round((endMs - startMs) / 60000);
+        }
+      }
+    }
 
-    let filtered = uniqueRoster;
+    let filtered = canonicalRoster;
     if (query.status) {
       filtered = filtered.filter((r) => r.status === query.status);
     }
     if (query.search) {
       const q = query.search.toLowerCase();
-      filtered = filtered.filter((r) => r.name.toLowerCase().includes(q) || r.rollNumber.toLowerCase().includes(q));
+      filtered = filtered.filter((r) =>
+        (r.name && r.name.toLowerCase().includes(q)) ||
+        (r.participantName && r.participantName.toLowerCase().includes(q)) ||
+        (r.rollNumber && r.rollNumber.toLowerCase().includes(q)) ||
+        (r.email && r.email.toLowerCase().includes(q))
+      );
     }
     if (query.teamId) {
       filtered = filtered.filter((r) => r.teamId === query.teamId);
@@ -228,10 +333,18 @@ export class AttendanceService {
       };
     }
 
+    const totalAssigned = canonicalRoster.length;
+    const totalPresent = canonicalRoster.filter((r) => r.status === 'present' || r.status === 'completed').length;
+    const totalSubmitted = canonicalRoster.filter((r) => r.status === 'completed').length;
+    const totalStarted = canonicalRoster.filter((r) => r.status === 'present').length;
+    const totalAbsent = Math.max(0, totalAssigned - totalPresent);
+
     return {
-      totalAssigned: uniqueRoster.length,
-      totalPresent: uniqueRoster.filter((r) => r.status === 'present' || r.status === 'completed').length,
-      totalSubmitted: uniqueRoster.filter((r) => r.status === 'completed').length,
+      totalAssigned,
+      totalPresent,
+      totalSubmitted,
+      totalStarted,
+      totalAbsent,
       records: paginatedRecords,
       totalRecords: totalFiltered,
       pagination: pagination || {
@@ -249,16 +362,6 @@ export class AttendanceService {
     const contest = await contestRepository.findById(contestId);
 
     const formattedRecords = (data.records || []).map((r, index) => {
-      const formatTime = (ts) => {
-        if (!ts) return '—';
-        try {
-          const d = new Date(ts);
-          return isNaN(d.getTime()) ? '—' : d.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'medium' });
-        } catch {
-          return '—';
-        }
-      };
-
       const resolvedStatus =
         r.status === 'completed' || r.status === 'present'
           ? 'Present'

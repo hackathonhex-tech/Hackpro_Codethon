@@ -107,9 +107,10 @@ export default function AttendancePage() {
     const total = (data as any)?.totalAssigned ?? records.length;
     const present = (data as any)?.totalPresent ?? records.filter((r) => r.status === 'present' || r.status === 'completed').length;
     const completed = (data as any)?.totalSubmitted ?? records.filter((r) => r.status === 'completed').length;
-    const absent = Math.max(0, total - present);
+    const started = (data as any)?.totalStarted ?? records.filter((r) => r.status === 'present').length;
+    const absent = (data as any)?.totalAbsent ?? Math.max(0, total - present);
 
-    return { total, present, completed, absent };
+    return { total, present, completed, started, absent };
   }, [data, records]);
 
   const filtered = useMemo(() => {

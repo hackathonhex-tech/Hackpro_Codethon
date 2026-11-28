@@ -135,6 +135,8 @@ export class AuthService {
               await attendanceRepository.update(existingAtt.id, {
                 status: 'present',
                 loginStatus: 'Logged in',
+                userEmail: user.email,
+                rollNumber: user.rollNumber,
                 loginTimestamp: existingAtt.loginTimestamp || nowIso,
               });
             }
@@ -143,6 +145,7 @@ export class AuthService {
               contestId: cId,
               userId: user.id,
               userName: user.name,
+              userEmail: user.email,
               rollNumber: user.rollNumber,
               teamId: null,
               status: 'present',

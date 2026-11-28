@@ -86,12 +86,12 @@ export function ContestAttendanceTab({ contestId }: { contestId: string }) {
   });
 
   const stats = {
-    total: records.length,
-    present: records.filter((r) => r.status === 'present' || r.status === 'completed').length,
-    completed: records.filter((r) => r.status === 'completed').length,
-    started: records.filter((r) => r.status === 'present').length,
-    submitted: records.filter((r) => r.status === 'completed').length,
-    absent: records.filter((r) => r.status === 'absent').length,
+    total: (data as any)?.totalAssigned ?? records.length,
+    present: (data as any)?.totalPresent ?? records.filter((r) => r.status === 'present' || r.status === 'completed').length,
+    completed: (data as any)?.totalSubmitted ?? records.filter((r) => r.status === 'completed').length,
+    started: (data as any)?.totalStarted ?? records.filter((r) => r.status === 'present').length,
+    submitted: (data as any)?.totalSubmitted ?? records.filter((r) => r.status === 'completed').length,
+    absent: (data as any)?.totalAbsent ?? records.filter((r) => r.status === 'absent').length,
   };
 
   const handleExport = async () => {
